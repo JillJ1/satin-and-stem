@@ -58,7 +58,7 @@ const initialProducts = {
   ]
 };
 
-// --- Email helper (placeholder – will be replaced with serverless function) ---
+// --- Email helper  ---
 const sendResendEmail = async (subject, htmlContent) => {
   try {
     const response = await fetch('/api/send-email', {
