@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Menu, X, ChevronRight, ChevronLeft, Heart, Instagram, Mail, ChevronDown, Lock, LayoutDashboard, Package, MessageSquare, LogOut, CheckCircle, Trash2 } from 'lucide-react';
+import { ShoppingBag, Menu, X, ChevronRight, ChevronLeft, Heart, Instagram, Mail, ChevronDown, Lock, LayoutDashboard, Package, MessageSquare, LogOut, CheckCircle, Trash2, Settings, Tag } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
 // --- Custom Styles & Color Palette (unchanged) ---
@@ -394,7 +394,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
           className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
           style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
         />
-      </td>
+       </td>
       <td className="px-6 py-4">
         <input
           type="text"
@@ -403,7 +403,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
           className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
           style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
         />
-      </td>
+       </td>
       <td className="px-6 py-4">
         <input
           type="number"
@@ -412,7 +412,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
           className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
           style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
         />
-      </td>
+       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
           {editItem.image_url && (
@@ -450,7 +450,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
             </label>
           </div>
         </div>
-      </td>
+       </td>
       <td className="px-6 py-4 text-right space-x-2">
         {hasChanges ? (
           <button
@@ -470,7 +470,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
         >
           <Trash2 size={14} />
         </button>
-      </td>
+       </td>
     </tr>
   );
 };
@@ -586,11 +586,23 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     zip: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [discountError, setDiscountError] = useState('');
 
   const subtotal = cart.reduce((sum, item) => sum + parseInt(item.price.replace('$', '')), 0);
   const shippingFee = 0; // Free shipping
   const fee = paymentMethod === 'zelle' ? 0 : (subtotal + shippingFee) * 0.03;
-  const grandTotal = subtotal + shippingFee + fee;
+
+  let discountAmount = 0;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === 'percentage') {
+      discountAmount = (subtotal + shippingFee) * (appliedDiscount.value / 100);
+    } else {
+      discountAmount = appliedDiscount.value;
+    }
+  }
+  const grandTotal = subtotal + shippingFee + fee - discountAmount;
 
   const removeFromCart = (indexToRemove) => {
     setCart(cart.filter((_, index) => index !== indexToRemove));
@@ -598,6 +610,38 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
 
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const applyDiscount = async () => {
+    setDiscountError('');
+    const { data, error } = await supabase
+      .from('discounts')
+      .select('*')
+      .eq('code', discountCode.toUpperCase())
+      .single();
+
+    if (error || !data) {
+      setDiscountError('Invalid discount code');
+      return;
+    }
+
+    // Check expiry and usage
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      setDiscountError('Discount code expired');
+      return;
+    }
+    if (data.usage_limit && data.used_count >= data.usage_limit) {
+      setDiscountError('Discount code usage limit reached');
+      return;
+    }
+
+    setAppliedDiscount(data);
+    setDiscountCode('');
+  };
+
+  const removeDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCode('');
   };
 
   const handleCheckoutSubmit = async (e) => {
@@ -637,6 +681,10 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     }
 
     const cartHtml = cart.map(item => `<li>${item.name} - ${item.price}</li>`).join('');
+    let discountHtml = '';
+    if (appliedDiscount) {
+      discountHtml = `<p><strong>Discount (${appliedDiscount.code}):</strong> -$${discountAmount.toFixed(2)}</p>`;
+    }
     const html = `
       <h2>New Order Request</h2>
       <p><strong>Name:</strong> ${formData.fullName}</p>
@@ -651,6 +699,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       <p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
       <p><strong>Shipping:</strong> Free</p>
       <p><strong>App Processing Fee:</strong> $${fee.toFixed(2)}</p>
+      ${discountHtml}
       <p><strong>Total:</strong> $${grandTotal.toFixed(2)}</p>
     `;
 
@@ -746,10 +795,58 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                       <option value="paypal">PayPal (+3% Fee)</option>
                     </select>
                   </div>
+
+                  {/* Discount section */}
+                  <div className="pt-4 border-t" style={{ borderColor: colors.powderedLilac }}>
+                    {!appliedDiscount ? (
+                      <div>
+                        <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Discount Code</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={discountCode}
+                            onChange={(e) => setDiscountCode(e.target.value)}
+                            placeholder="Enter code"
+                            className="flex-1 bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
+                            style={{ borderColor: colors.mutedMauve }}
+                          />
+                          <button
+                            type="button"
+                            onClick={applyDiscount}
+                            className="text-xs font-sleek uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90"
+                            style={{ backgroundColor: colors.dustyOrchid }}
+                          >
+                            Apply
+                          </button>
+                        </div>
+                        {discountError && <p className="text-red-500 text-xs mt-1">{discountError}</p>}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-sleek" style={{ color: colors.deepRosewood }}>
+                          Discount: {appliedDiscount.code} (-{appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : `$${appliedDiscount.value}`})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={removeDiscount}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="pt-4 border-t space-y-2 font-sleek text-sm" style={{ borderColor: colors.powderedLilac, color: colors.deepRosewood }}>
                     <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
                     <div className="flex justify-between"><span>Shipping</span><span>Free</span></div>
                     {fee > 0 && <div className="flex justify-between text-red-400"><span>App Processing Fee</span><span>${fee.toFixed(2)}</span></div>}
+                    {appliedDiscount && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Discount</span>
+                        <span>-${discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-medium pt-2 text-lg"><span>Total</span><span>${grandTotal.toFixed(2)}</span></div>
                   </div>
                   <button
@@ -837,11 +934,13 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
   );
 };
 
-const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) => {
+const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comingSoon, setComingSoon }) => {
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [updatingInquiry, setUpdatingInquiry] = useState(null);
+  const [discounts, setDiscounts] = useState([]);
+  const [newDiscount, setNewDiscount] = useState({ code: '', type: 'percentage', value: '', expires_at: '', usage_limit: '' });
 
   useEffect(() => {
     const checkUser = async () => {
@@ -867,6 +966,14 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
     fetchOrders();
     fetchInquiries();
   }, []);
+
+  useEffect(() => {
+    const fetchDiscounts = async () => {
+      const { data, error } = await supabase.from('discounts').select('*');
+      if (!error) setDiscounts(data || []);
+    };
+    if (activeTab === 'discounts') fetchDiscounts();
+  }, [activeTab]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     const { error } = await supabase
@@ -970,9 +1077,39 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
     }
   };
 
+  const handleCreateDiscount = async () => {
+    const { data, error } = await supabase
+      .from('discounts')
+      .insert({
+        code: newDiscount.code.toUpperCase(),
+        type: newDiscount.type,
+        value: parseFloat(newDiscount.value),
+        expires_at: newDiscount.expires_at || null,
+        usage_limit: newDiscount.usage_limit ? parseInt(newDiscount.usage_limit) : null,
+      })
+      .select();
+    if (error) {
+      showToast('Error creating discount');
+    } else {
+      setDiscounts([...discounts, data[0]]);
+      setNewDiscount({ code: '', type: 'percentage', value: '', expires_at: '', usage_limit: '' });
+      showToast('Discount created');
+    }
+  };
+
+  const handleDeleteDiscount = async (id) => {
+    const confirmed = window.confirm('Delete this discount?');
+    if (!confirmed) return;
+    const { error } = await supabase.from('discounts').delete().eq('id', id);
+    if (!error) {
+      setDiscounts(discounts.filter(d => d.id !== id));
+      showToast('Discount deleted');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F9F9F9] flex flex-col md:flex-row font-sans">
-      {/* Sidebar unchanged */}
+      {/* Sidebar */}
       <div className="w-full md:w-64 bg-white border-r min-h-screen flex flex-col" style={{ borderColor: '#EAEAEA' }}>
         <div className="p-6 border-b" style={{ borderColor: '#EAEAEA' }}>
           <span className="font-elegant text-2xl tracking-wide" style={{ color: colors.dustyOrchid }}>Satin & Stem</span>
@@ -987,6 +1124,12 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
           </button>
           <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'inventory' ? 'bg-[#F4DFE6]/40 text-[#4A373C] font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
             <LayoutDashboard size={18} strokeWidth={1.5} /> <span>Inventory</span>
+          </button>
+          <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-[#F4DFE6]/40 text-[#4A373C] font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
+            <Settings size={18} strokeWidth={1.5} /> <span>Site Status</span>
+          </button>
+          <button onClick={() => setActiveTab('discounts')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'discounts' ? 'bg-[#F4DFE6]/40 text-[#4A373C] font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
+            <Tag size={18} strokeWidth={1.5} /> <span>Discounts</span>
           </button>
         </div>
         <div className="p-4 border-t" style={{ borderColor: '#EAEAEA' }}>
@@ -1135,6 +1278,133 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
             ))}
           </div>
         )}
+
+        {activeTab === 'settings' && (
+          <div>
+            <h2 className="text-3xl font-elegant mb-2" style={{ color: colors.deepRosewood }}>Site Status</h2>
+            <div className="bg-white border p-6 rounded-lg" style={{ borderColor: '#EAEAEA' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-elegant text-xl">Coming Soon Mode</h3>
+                  <p className="font-sleek text-sm text-gray-500">When enabled, visitors see a "Coming Soon" page.</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const newValue = !comingSoon;
+                    const { error } = await supabase
+                      .from('settings')
+                      .update({ value: newValue })
+                      .eq('key', 'coming_soon');
+                    if (!error) {
+                      setComingSoon(newValue);
+                      showToast(`Coming soon mode ${newValue ? 'enabled' : 'disabled'}.`);
+                    } else {
+                      showToast('Error updating setting.');
+                    }
+                  }}
+                  className={`px-4 py-2 rounded text-sm font-sleek uppercase tracking-widest ${comingSoon ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}
+                >
+                  {comingSoon ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'discounts' && (
+          <div>
+            <h2 className="text-3xl font-elegant mb-2" style={{ color: colors.deepRosewood }}>Discounts</h2>
+            <p className="font-sleek text-sm text-gray-500 mb-8">Manage promotional discount codes.</p>
+            <div className="bg-white border rounded-lg shadow-sm overflow-hidden mb-8" style={{ borderColor: '#EAEAEA' }}>
+              <div className="p-6 border-b" style={{ borderColor: '#EAEAEA' }}>
+                <h3 className="font-elegant text-lg mb-4">Create New Discount</h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Code"
+                    value={newDiscount.code}
+                    onChange={(e) => setNewDiscount({ ...newDiscount, code: e.target.value })}
+                    className="border rounded px-3 py-2 font-sleek text-sm"
+                    style={{ borderColor: '#EAEAEA' }}
+                  />
+                  <select
+                    value={newDiscount.type}
+                    onChange={(e) => setNewDiscount({ ...newDiscount, type: e.target.value })}
+                    className="border rounded px-3 py-2 font-sleek text-sm"
+                    style={{ borderColor: '#EAEAEA' }}
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed ($)</option>
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Value"
+                    value={newDiscount.value}
+                    onChange={(e) => setNewDiscount({ ...newDiscount, value: e.target.value })}
+                    className="border rounded px-3 py-2 font-sleek text-sm"
+                    style={{ borderColor: '#EAEAEA' }}
+                  />
+                  <input
+                    type="date"
+                    placeholder="Expires At"
+                    value={newDiscount.expires_at}
+                    onChange={(e) => setNewDiscount({ ...newDiscount, expires_at: e.target.value })}
+                    className="border rounded px-3 py-2 font-sleek text-sm"
+                    style={{ borderColor: '#EAEAEA' }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Usage Limit"
+                    value={newDiscount.usage_limit}
+                    onChange={(e) => setNewDiscount({ ...newDiscount, usage_limit: e.target.value })}
+                    className="border rounded px-3 py-2 font-sleek text-sm"
+                    style={{ borderColor: '#EAEAEA' }}
+                  />
+                </div>
+                <button
+                  onClick={handleCreateDiscount}
+                  disabled={!newDiscount.code || !newDiscount.value}
+                  className="mt-4 px-6 py-2 text-sm font-sleek uppercase tracking-widest text-white rounded shadow-sm hover:opacity-90 disabled:opacity-50"
+                  style={{ backgroundColor: colors.dustyOrchid }}
+                >
+                  Create Discount
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-sleek text-sm">
+                  <thead className="bg-gray-50 border-b text-xs uppercase tracking-widest text-gray-500" style={{ borderColor: '#EAEAEA' }}>
+                    <tr>
+                      <th className="px-6 py-4">Code</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4">Value</th>
+                      <th className="px-6 py-4">Expires At</th>
+                      <th className="px-6 py-4">Usage Limit</th>
+                      <th className="px-6 py-4">Used Count</th>
+                      <th className="px-6 py-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y" style={{ borderColor: '#EAEAEA' }}>
+                    {discounts.map((discount) => (
+                      <tr key={discount.id}>
+                        <td className="px-6 py-4 font-medium">{discount.code}</td>
+                        <td className="px-6 py-4">{discount.type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
+                        <td className="px-6 py-4">{discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`}</td>
+                        <td className="px-6 py-4">{discount.expires_at ? new Date(discount.expires_at).toLocaleDateString() : 'Never'}</td>
+                        <td className="px-6 py-4">{discount.usage_limit || '∞'}</td>
+                        <td className="px-6 py-4">{discount.used_count || 0}</td>
+                        <td className="px-6 py-4">
+                          <button onClick={() => handleDeleteDiscount(discount.id)} className="text-red-500 hover:text-red-700">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1186,6 +1456,33 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
   );
 };
 
+// --- Coming Soon Page Component ---
+const ComingSoonPage = () => {
+  return (
+    <div className="min-h-screen bg-[#FCFBFB] flex items-center justify-center px-4">
+      <div className="text-center max-w-2xl">
+        <div className="mb-8">
+          <span className="font-elegant text-6xl tracking-wide" style={{ color: colors.dustyOrchid }}>
+            Satin & Stem
+          </span>
+        </div>
+        <h1 className="font-elegant text-4xl md:text-6xl mb-6" style={{ color: colors.deepRosewood }}>
+          Coming Soon
+        </h1>
+        <p className="font-sleek text-lg text-gray-600 mb-8">
+          We're preparing something beautiful for you. 
+          Be the first to know when we launch.
+        </p>
+        <div className="inline-block border-b border-[#D56989] pb-1">
+          <span className="font-sleek text-sm tracking-widest uppercase" style={{ color: colors.dustyOrchid }}>
+            Follow us on Instagram
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ---------- Main App Component ----------
 export default function App() {
   const [toastMessage, setToastMessage] = useState('');
@@ -1193,6 +1490,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
   const [products, setProducts] = useState({ classic: [], collegiate: [], greek: [] });
+  const [comingSoon, setComingSoon] = useState(false);
 
   // Fetch products from Supabase on mount
   useEffect(() => {
@@ -1213,6 +1511,21 @@ export default function App() {
     fetchProducts();
   }, []);
 
+  // Fetch coming soon setting
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'coming_soon')
+        .single();
+      if (!error && data) {
+        setComingSoon(data.value);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentView]);
@@ -1228,6 +1541,11 @@ export default function App() {
   };
 
   const isPublicView = !currentView.startsWith('admin');
+
+  // Coming soon mode: show coming soon page unless admin route
+  if (comingSoon && !currentView.startsWith('admin')) {
+    return <ComingSoonPage />;
+  }
 
   return (
     <>
@@ -1258,7 +1576,7 @@ export default function App() {
         {currentView === 'cart' && <CartPage cart={cart} setCart={setCart} setCurrentView={setCurrentView} showToast={showToast} />}
 
         {currentView === 'admin-login' && <AdminLogin setCurrentView={setCurrentView} showToast={showToast} />}
-        {currentView === 'admin-dashboard' && <AdminDashboard setCurrentView={setCurrentView} showToast={showToast} products={products} setProducts={setProducts} />}
+        {currentView === 'admin-dashboard' && <AdminDashboard setCurrentView={setCurrentView} showToast={showToast} products={products} setProducts={setProducts} comingSoon={comingSoon} setComingSoon={setComingSoon} />}
 
         {isPublicView && <Footer showToast={showToast} setActiveModal={setActiveModal} setCurrentView={setCurrentView} />}
 
