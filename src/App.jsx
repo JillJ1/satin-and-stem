@@ -356,13 +356,13 @@ const InventoryRow = ({ item, category, onSave }) => {
     <tr className="hover:bg-gray-50 transition-colors">
       <td className="px-6 py-4">
         <input type="text" value={editItem.name} onChange={e => setEditItem({...editItem, name: e.target.value})} className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-       </td>
+        </td>
       <td className="px-6 py-4">
         <input type="text" value={editItem.price} onChange={e => setEditItem({...editItem, price: e.target.value})} className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-       </td>
+        </td>
       <td className="px-6 py-4">
         <input type="number" value={editItem.inventory} onChange={e => setEditItem({...editItem, inventory: parseInt(e.target.value) || 0})} className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-       </td>
+        </td>
       <td className="px-6 py-4">
         <input type="text" value={editItem.image_url || editItem.img_color || editItem.imgColor} placeholder="Hex Color or Image URL" onChange={e => {
             const val = e.target.value;
@@ -372,14 +372,14 @@ const InventoryRow = ({ item, category, onSave }) => {
                setEditItem({...editItem, img_color: val, image_url: ''});
             }
         }} className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-       </td>
+        </td>
       <td className="px-6 py-4 text-right">
         {hasChanges ? (
            <button onClick={() => onSave(category, editItem)} className="text-[10px] uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90 transition-opacity" style={{ backgroundColor: colors.dustyOrchid }}>Save</button>
         ) : (
            <span className="text-[10px] uppercase tracking-widest text-gray-400">Saved</span>
         )}
-       </td>
+        </td>
     </tr>
   );
 };
@@ -734,10 +734,12 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
   );
 };
 
+// --- UPDATED AdminDashboard Component (with inquiry reply/mark functionality) ---
 const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) => {
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [inquiries, setInquiries] = useState([]);
+  const [updatingInquiry, setUpdatingInquiry] = useState(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -812,8 +814,36 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
     }
   };
 
+  // --- New functions for inquiries ---
+  const handleReply = (inquiry) => {
+    // Open default mail client with the inquiry's email
+    window.location.href = `mailto:${inquiry.email}?subject=Re: Your Satin & Stem custom inquiry`;
+  };
+
+  const handleMarkAsRead = async (inquiry) => {
+    // Confirm before marking
+    const confirmed = window.confirm(`Did you reply to ${inquiry.name}? Mark this inquiry as "Responded"?`);
+    if (!confirmed) return;
+
+    setUpdatingInquiry(inquiry.id);
+    const { error } = await supabase
+      .from('inquiries')
+      .update({ status: 'Responded' })
+      .eq('id', inquiry.id);
+    setUpdatingInquiry(null);
+
+    if (error) {
+      showToast('Error updating inquiry status');
+    } else {
+      // Update local state
+      setInquiries(inquiries.map(i => i.id === inquiry.id ? { ...i, status: 'Responded' } : i));
+      showToast(`Inquiry from ${inquiry.name} marked as responded.`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F9F9F9] flex flex-col md:flex-row font-sans">
+      {/* Sidebar – unchanged */}
       <div className="w-full md:w-64 bg-white border-r min-h-screen flex flex-col" style={{ borderColor: '#EAEAEA' }}>
         <div className="p-6 border-b" style={{ borderColor: '#EAEAEA' }}>
           <span className="font-elegant text-2xl tracking-wide" style={{ color: colors.dustyOrchid }}>Satin & Stem</span>
@@ -839,6 +869,7 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
 
       <div className="flex-1 p-8 md:p-12 overflow-y-auto h-screen">
         {activeTab === 'orders' && (
+          // --- Orders Table (unchanged from original) ---
           <div>
             <h2 className="text-3xl font-elegant mb-2" style={{ color: colors.deepRosewood }}>Order Requests</h2>
             <p className="font-sleek text-sm text-gray-500 mb-8">Review incoming orders and update their fulfillment status.</p>
@@ -887,27 +918,52 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
         )}
 
         {activeTab === 'inquiries' && (
+          // --- Inquiries Section (updated with new functionality) ---
           <div>
             <h2 className="text-3xl font-elegant mb-2" style={{ color: colors.deepRosewood }}>Custom Inquiries</h2>
             <p className="font-sleek text-sm text-gray-500 mb-8">Review and respond to special requests.</p>
             <div className="grid grid-cols-1 gap-6">
               {inquiries.map((inq) => (
-                <div key={inq.id} className="bg-white border p-6 rounded-lg shadow-sm" style={{ borderColor: '#EAEAEA' }}>
+                <div
+                  key={inq.id}
+                  className={`bg-white border p-6 rounded-lg shadow-sm transition-all ${inq.status === 'Responded' ? 'opacity-60 grayscale-[0.1] bg-gray-50' : ''}`}
+                  style={{ borderColor: '#EAEAEA' }}
+                >
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h4 className="font-elegant text-xl" style={{ color: colors.deepRosewood }}>{inq.name}</h4>
                       <p className="font-sleek text-xs uppercase tracking-widest text-red-400 mt-1">Needed by: {inq.needed_by}</p>
+                      <p className="font-sleek text-xs text-gray-400 mt-1">Email: {inq.email}</p>
                     </div>
-                    <span className="px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border border-blue-200 bg-blue-50 text-blue-700">
-                      {inq.status}
+                    <span className="px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border"
+                          style={{
+                            backgroundColor: inq.status === 'Responded' ? '#e2e8f0' : '#dbeafe',
+                            borderColor: inq.status === 'Responded' ? '#cbd5e1' : '#bfdbfe',
+                            color: inq.status === 'Responded' ? '#4b5563' : '#1e40af'
+                          }}>
+                      {inq.status === 'Responded' ? 'Responded' : 'Unread'}
                     </span>
                   </div>
                   <p className="font-sleek text-sm text-gray-600 leading-relaxed border-l-2 pl-4" style={{ borderColor: colors.powderedLilac }}>
                     "{inq.details}"
                   </p>
                   <div className="mt-6 pt-4 border-t flex justify-end space-x-4" style={{ borderColor: '#EAEAEA' }}>
-                    <button className="text-xs font-sleek uppercase tracking-widest text-gray-500 hover:text-gray-800">Mark as Read</button>
-                    <button className="text-xs font-sleek uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90" style={{ backgroundColor: colors.dustyOrchid }}>Reply</button>
+                    <button
+                      onClick={() => handleReply(inq)}
+                      className="text-xs font-sleek uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90"
+                      style={{ backgroundColor: colors.dustyOrchid }}
+                    >
+                      Reply
+                    </button>
+                    {inq.status !== 'Responded' && (
+                      <button
+                        onClick={() => handleMarkAsRead(inq)}
+                        disabled={updatingInquiry === inq.id}
+                        className="text-xs font-sleek uppercase tracking-widest text-gray-500 hover:text-gray-800 disabled:opacity-50"
+                      >
+                        {updatingInquiry === inq.id ? 'Updating...' : 'Mark as Read (Email Sent?)'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -916,6 +972,7 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
         )}
 
         {activeTab === 'inventory' && (
+          // --- Inventory Table (unchanged from original) ---
           <div>
             <h2 className="text-3xl font-elegant mb-8" style={{ color: colors.deepRosewood }}>Inventory Management</h2>
             {Object.entries(products).map(([category, items]) => (
