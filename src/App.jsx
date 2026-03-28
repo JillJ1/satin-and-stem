@@ -1,8 +1,9 @@
+// UNCHANGED: Imports
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Menu, X, ChevronRight, ChevronLeft, Heart, Instagram, Mail, ChevronDown, Lock, LayoutDashboard, Package, MessageSquare, LogOut, CheckCircle } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
-// --- Custom Styles & Color Palette (unchanged) ---
+// UNCHANGED: Custom Styles & Color Palette
 const customStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap');
 
@@ -28,6 +29,7 @@ const customStyles = `
   }
 `;
 
+// UNCHANGED: Colors
 const colors = {
   petalGlaze: '#EA9CAF',
   dustyOrchid: '#D56989',
@@ -40,7 +42,7 @@ const colors = {
   creamyWhite: '#FCFBFB'
 };
 
-// --- Fallback product data (in case Supabase fetch fails) ---
+// UNCHANGED: Fallback product data
 const initialProducts = {
   classic: [
     { id: 1, name: "The Ethereal Sage", price: "$55", description: "Lush green foliage with ivory ribbons.", imgColor: colors.sorbetStem, inventory: 3 },
@@ -54,11 +56,10 @@ const initialProducts = {
   greek: [
     { id: 6, name: "Salmon & Apple Blossom (AKA)", price: "$65", description: "Exquisite pink and green floral integration.", imgColor: colors.petalGlaze, inventory: 1 },
     { id: 7, name: "Crimson Lace (DST)", price: "$65", description: "Rich crimson orchids set against ivory lace.", imgColor: '#9B3C4B', inventory: 1 },
-    // ... include all your other Greek products here (same as your original)
   ]
 };
 
-// --- Email helper  ---
+// UNCHANGED: Email helper
 const sendResendEmail = async (subject, htmlContent) => {
   try {
     const response = await fetch('/api/send-email', {
@@ -77,8 +78,7 @@ const sendResendEmail = async (subject, htmlContent) => {
   }
 };
 
-// ---------- All UI Components ----------
-
+// UNCHANGED: Navbar Component
 const Navbar = ({ showToast, currentView, setCurrentView, cart }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -162,6 +162,7 @@ const Navbar = ({ showToast, currentView, setCurrentView, cart }) => {
   );
 };
 
+// UNCHANGED: HeroSection Component
 const HeroSection = ({ setCurrentView }) => {
   return (
     <div className="relative overflow-hidden bg-[#FCFBFB] border-b border-[#F4DFE6]">
@@ -215,6 +216,7 @@ const HeroSection = ({ setCurrentView }) => {
   );
 };
 
+// UNCHANGED: CollectionsSection Component
 const CollectionsSection = ({ setCurrentView }) => {
   return (
     <section id="collections-grid" className="py-24 bg-[#FCFBFB] border-b border-[#F4DFE6]">
@@ -272,6 +274,7 @@ const CollectionsSection = ({ setCurrentView }) => {
   );
 };
 
+// CHANGED: CollectionPage Component (availability calculation updated)
 const CollectionPage = ({ categoryKey, title, description, setCurrentView, showToast, addToCart, cart, products }) => {
   const categoryProducts = products[categoryKey];
 
@@ -294,9 +297,9 @@ const CollectionPage = ({ categoryKey, title, description, setCurrentView, showT
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {categoryProducts?.map((item) => {
-            // --- EDITED: Update availability calculation (show actual inventory only) ---
+            // CHANGED: Update availability calculation (show actual inventory only)
             const available = item.inventory;
-            // --- END EDIT ---
+            // UNCHANGED: rest of the map function
 
             return (
               <div key={item.id} className="group">
@@ -344,6 +347,7 @@ const CollectionPage = ({ categoryKey, title, description, setCurrentView, showT
   );
 };
 
+// UNCHANGED: InventoryRow Component
 const InventoryRow = ({ item, category, onSave }) => {
   const [editItem, setEditItem] = useState(item);
   
@@ -385,7 +389,7 @@ const InventoryRow = ({ item, category, onSave }) => {
   );
 };
 
-// --- EDITED: Replaced CustomOrderPage to remove delivery logic ---
+// CHANGED: CustomOrderPage Component (replaced entirely to remove delivery logic)
 const CustomOrderPage = ({ setCurrentView, showToast }) => {
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 30);
@@ -483,8 +487,8 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
     </div>
   );
 };
-// --- END EDIT ---
 
+// UNCHANGED: CartPage Component
 const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const [isCheckout, setIsCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('zelle');
@@ -685,6 +689,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   );
 };
 
+// UNCHANGED: AdminLogin Component
 const AdminLogin = ({ setCurrentView, showToast }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -736,6 +741,7 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
   );
 };
 
+// UNCHANGED: AdminDashboard Component
 const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) => {
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
@@ -1013,6 +1019,7 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
   );
 };
 
+// UNCHANGED: Footer Component
 const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
   return (
     <footer className="bg-white pt-24 pb-12 border-t" style={{ borderColor: colors.lavenderBlush }}>
@@ -1059,7 +1066,7 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
   );
 };
 
-// ---------- Main App Component ----------
+// UNCHANGED: Main App Component
 export default function App() {
   const [toastMessage, setToastMessage] = useState('');
   const [currentView, setCurrentView] = useState('home');
