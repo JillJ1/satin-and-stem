@@ -727,7 +727,7 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm"
               style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
-              placeholder="admin@satinandstem.shop"
+              placeholder="Email"
             />
           </div>
           <div>
@@ -765,7 +765,7 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      const allowedEmail = 'admin@satinandstem.shop';
+      const allowedEmail = 'satinandstem@protonmail.com';
       if (!session || session?.user?.email !== allowedEmail) {
         setCurrentView('admin-login');
         showToast('Please log in to access the dashboard.');
