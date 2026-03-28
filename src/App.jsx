@@ -346,8 +346,11 @@ const CollectionPage = ({ categoryKey, title, description, setCurrentView, showT
 };
 
 // UNCHANGED: InventoryRow Component
+import { supabase } from './lib/supabase'; // already imported at top
+
 const InventoryRow = ({ item, category, onSave }) => {
   const [editItem, setEditItem] = useState(item);
+  const [uploading, setUploading] = useState(false);
   
   useEffect(() => {
     setEditItem(item);
@@ -355,34 +358,122 @@ const InventoryRow = ({ item, category, onSave }) => {
 
   const hasChanges = JSON.stringify(editItem) !== JSON.stringify(item);
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      setUploading(false);
+      return;
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+    
+    const imageUrl = publicUrlData.publicUrl;
+
+    // Update editItem with new image URL
+    setEditItem({
+      ...editItem,
+      image_url: imageUrl,
+      imgColor: '#F3EEF1' // fallback color
+    });
+    setUploading(false);
+  };
+
   return (
     <tr className="hover:bg-gray-50 transition-colors">
       <td className="px-6 py-4">
-        <input type="text" value={editItem.name} onChange={e => setEditItem({...editItem, name: e.target.value})} className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-        </td>
+        <input
+          type="text"
+          value={editItem.name}
+          onChange={e => setEditItem({...editItem, name: e.target.value})}
+          className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
+          style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
+        />
+      </td>
       <td className="px-6 py-4">
-        <input type="text" value={editItem.price} onChange={e => setEditItem({...editItem, price: e.target.value})} className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-        </td>
+        <input
+          type="text"
+          value={editItem.price}
+          onChange={e => setEditItem({...editItem, price: e.target.value})}
+          className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
+          style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
+        />
+      </td>
       <td className="px-6 py-4">
-        <input type="number" value={editItem.inventory} onChange={e => setEditItem({...editItem, inventory: parseInt(e.target.value) || 0})} className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-        </td>
+        <input
+          type="number"
+          value={editItem.inventory}
+          onChange={e => setEditItem({...editItem, inventory: parseInt(e.target.value) || 0})}
+          className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
+          style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
+        />
+      </td>
       <td className="px-6 py-4">
-        <input type="text" value={editItem.image_url || editItem.img_color || editItem.imgColor} placeholder="Hex Color or Image URL" onChange={e => {
-            const val = e.target.value;
-            if(val.startsWith('http')) {
-               setEditItem({...editItem, image_url: val, img_color: '#F3EEF1'});
-            } else {
-               setEditItem({...editItem, img_color: val, image_url: ''});
-            }
-        }} className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1" style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }} />
-        </td>
+        <div className="flex items-center gap-2">
+          {/* Image preview (if exists) */}
+          {editItem.image_url && (
+            <img
+              src={editItem.image_url}
+              alt="preview"
+              className="w-12 h-12 object-cover rounded border"
+            />
+          )}
+          <div className="flex-1">
+            <input
+              type="text"
+              value={editItem.image_url || editItem.img_color || editItem.imgColor}
+              placeholder="Hex Color or Image URL"
+              onChange={e => {
+                const val = e.target.value;
+                if (val.startsWith('http')) {
+                  setEditItem({...editItem, image_url: val, img_color: '#F3EEF1'});
+                } else {
+                  setEditItem({...editItem, img_color: val, image_url: ''});
+                }
+              }}
+              className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
+              style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
+            />
+            <label className="text-xs text-[#D56989] cursor-pointer hover:underline">
+              {uploading ? 'Uploading...' : 'Upload image'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={uploading}
+              />
+            </label>
+          </div>
+        </div>
+      </td>
       <td className="px-6 py-4 text-right">
         {hasChanges ? (
-           <button onClick={() => onSave(category, editItem)} className="text-[10px] uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90 transition-opacity" style={{ backgroundColor: colors.dustyOrchid }}>Save</button>
+          <button
+            onClick={() => onSave(category, editItem)}
+            className="text-[10px] uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: colors.dustyOrchid }}
+          >
+            Save
+          </button>
         ) : (
-           <span className="text-[10px] uppercase tracking-widest text-gray-400">Saved</span>
+          <span className="text-[10px] uppercase tracking-widest text-gray-400">Saved</span>
         )}
-        </td>
+      </td>
     </tr>
   );
 };
