@@ -1,9 +1,8 @@
-// UNCHANGED: Imports
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Menu, X, ChevronRight, ChevronLeft, Heart, Instagram, Mail, ChevronDown, Lock, LayoutDashboard, Package, MessageSquare, LogOut, CheckCircle } from 'lucide-react';
+import { ShoppingBag, Menu, X, ChevronRight, ChevronLeft, Heart, Instagram, Mail, ChevronDown, Lock, LayoutDashboard, Package, MessageSquare, LogOut, CheckCircle, Trash2 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
-// UNCHANGED: Custom Styles & Color Palette
+// --- Custom Styles & Color Palette (unchanged) ---
 const customStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap');
 
@@ -29,7 +28,6 @@ const customStyles = `
   }
 `;
 
-// UNCHANGED: Colors
 const colors = {
   petalGlaze: '#EA9CAF',
   dustyOrchid: '#D56989',
@@ -42,7 +40,7 @@ const colors = {
   creamyWhite: '#FCFBFB'
 };
 
-// UNCHANGED: Fallback product data
+// --- Fallback product data (in case Supabase fetch fails) ---
 const initialProducts = {
   classic: [
     { id: 1, name: "The Ethereal Sage", price: "$55", description: "Lush green foliage with ivory ribbons.", imgColor: colors.sorbetStem, inventory: 3 },
@@ -59,7 +57,7 @@ const initialProducts = {
   ]
 };
 
-// UNCHANGED: Email helper
+// --- Email helper ---
 const sendResendEmail = async (subject, htmlContent) => {
   try {
     const response = await fetch('/api/send-email', {
@@ -78,7 +76,8 @@ const sendResendEmail = async (subject, htmlContent) => {
   }
 };
 
-// UNCHANGED: Navbar Component
+// ---------- All UI Components ----------
+
 const Navbar = ({ showToast, currentView, setCurrentView, cart }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -162,7 +161,6 @@ const Navbar = ({ showToast, currentView, setCurrentView, cart }) => {
   );
 };
 
-// UNCHANGED: HeroSection Component
 const HeroSection = ({ setCurrentView }) => {
   return (
     <div className="relative overflow-hidden bg-[#FCFBFB] border-b border-[#F4DFE6]">
@@ -216,7 +214,6 @@ const HeroSection = ({ setCurrentView }) => {
   );
 };
 
-// UNCHANGED: CollectionsSection Component
 const CollectionsSection = ({ setCurrentView }) => {
   return (
     <section id="collections-grid" className="py-24 bg-[#FCFBFB] border-b border-[#F4DFE6]">
@@ -274,7 +271,6 @@ const CollectionsSection = ({ setCurrentView }) => {
   );
 };
 
-// UNCHANGED: CollectionPage Component
 const CollectionPage = ({ categoryKey, title, description, setCurrentView, showToast, addToCart, cart, products }) => {
   const categoryProducts = products[categoryKey];
 
@@ -345,10 +341,7 @@ const CollectionPage = ({ categoryKey, title, description, setCurrentView, showT
   );
 };
 
-// UNCHANGED: InventoryRow Component
-import { supabase } from './lib/supabase'; // already imported at top
-
-const InventoryRow = ({ item, category, onSave }) => {
+const InventoryRow = ({ item, category, onSave, onDelete }) => {
   const [editItem, setEditItem] = useState(item);
   const [uploading, setUploading] = useState(false);
   
@@ -377,18 +370,16 @@ const InventoryRow = ({ item, category, onSave }) => {
       return;
     }
 
-    // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from('product-images')
       .getPublicUrl(filePath);
     
     const imageUrl = publicUrlData.publicUrl;
 
-    // Update editItem with new image URL
     setEditItem({
       ...editItem,
       image_url: imageUrl,
-      imgColor: '#F3EEF1' // fallback color
+      img_color: '#F3EEF1'
     });
     setUploading(false);
   };
@@ -424,7 +415,6 @@ const InventoryRow = ({ item, category, onSave }) => {
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
-          {/* Image preview (if exists) */}
           {editItem.image_url && (
             <img
               src={editItem.image_url}
@@ -461,7 +451,7 @@ const InventoryRow = ({ item, category, onSave }) => {
           </div>
         </div>
       </td>
-      <td className="px-6 py-4 text-right">
+      <td className="px-6 py-4 text-right space-x-2">
         {hasChanges ? (
           <button
             onClick={() => onSave(category, editItem)}
@@ -473,12 +463,18 @@ const InventoryRow = ({ item, category, onSave }) => {
         ) : (
           <span className="text-[10px] uppercase tracking-widest text-gray-400">Saved</span>
         )}
+        <button
+          onClick={() => onDelete(category, item.id)}
+          className="text-[10px] uppercase tracking-widest text-red-500 hover:text-red-700"
+          title="Delete product"
+        >
+          <Trash2 size={14} />
+        </button>
       </td>
     </tr>
   );
 };
 
-// UNCHANGED: CustomOrderPage Component
 const CustomOrderPage = ({ setCurrentView, showToast }) => {
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 30);
@@ -577,7 +573,6 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
   );
 };
 
-// UNCHANGED: CartPage Component
 const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const [isCheckout, setIsCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('zelle');
@@ -609,24 +604,21 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Build items array for DB function
     const itemsForDb = cart.map(item => ({
       id: item.id,
-      quantity: 1, // adjust if multiple quantities allowed
+      quantity: 1,
     }));
     const orderNumber = `ORD-${Date.now()}`;
 
-    // Build shipping address object
     const shippingAddress = {
       street: formData.street,
       street2: formData.street2 || null,
       city: formData.city,
       state: formData.state,
       zip: formData.zip
-
     };
 
-    const { data, error } = await supabase.rpc('create_order_and_update_inventory', {
+    const { error } = await supabase.rpc('create_order_and_update_inventory', {
       order_number: orderNumber,
       customer_name: formData.fullName,
       customer_email: formData.email,
@@ -644,7 +636,6 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       return;
     }
 
-    // Send email notification
     const cartHtml = cart.map(item => `<li>${item.name} - ${item.price}</li>`).join('');
     const html = `
       <h2>New Order Request</h2>
@@ -779,7 +770,6 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   );
 };
 
-// CHANGED: AdminLogin Component (added name attributes)
 const AdminLogin = ({ setCurrentView, showToast }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -819,7 +809,7 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm"
               style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
-              placeholder="Email"
+              placeholder="admin@satinandstem.shop"
             />
           </div>
           <div>
@@ -847,7 +837,6 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
   );
 };
 
-// UNCHANGED: AdminDashboard Component
 const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) => {
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
@@ -939,6 +928,25 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
     }
   };
 
+  const handleDeleteProduct = async (category, productId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this product? This cannot be undone.');
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+
+    if (error) {
+      showToast('Error deleting product');
+      console.error(error);
+    } else {
+      const updatedCategory = products[category].filter(item => item.id !== productId);
+      setProducts({ ...products, [category]: updatedCategory });
+      showToast('Product deleted successfully.');
+    }
+  };
+
   const handleReply = (inquiry) => {
     window.location.href = `mailto:${inquiry.email}?subject=Re: Your Satin & Stem custom inquiry`;
   };
@@ -964,6 +972,7 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
 
   return (
     <div className="min-h-screen bg-[#F9F9F9] flex flex-col md:flex-row font-sans">
+      {/* Sidebar unchanged */}
       <div className="w-full md:w-64 bg-white border-r min-h-screen flex flex-col" style={{ borderColor: '#EAEAEA' }}>
         <div className="p-6 border-b" style={{ borderColor: '#EAEAEA' }}>
           <span className="font-elegant text-2xl tracking-wide" style={{ color: colors.dustyOrchid }}>Satin & Stem</span>
@@ -1111,7 +1120,13 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
                     </thead>
                     <tbody className="divide-y" style={{ borderColor: '#EAEAEA' }}>
                       {items.map((item) => (
-                        <InventoryRow key={item.id} item={item} category={category} onSave={handleProductUpdate} />
+                        <InventoryRow
+                          key={item.id}
+                          item={item}
+                          category={category}
+                          onSave={handleProductUpdate}
+                          onDelete={handleDeleteProduct}
+                        />
                       ))}
                     </tbody>
                   </table>
@@ -1125,7 +1140,6 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
   );
 };
 
-// UNCHANGED: Footer Component
 const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
   return (
     <footer className="bg-white pt-24 pb-12 border-t" style={{ borderColor: colors.lavenderBlush }}>
@@ -1172,7 +1186,7 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
   );
 };
 
-// UNCHANGED: Main App Component
+// ---------- Main App Component ----------
 export default function App() {
   const [toastMessage, setToastMessage] = useState('');
   const [currentView, setCurrentView] = useState('home');
