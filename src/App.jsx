@@ -532,6 +532,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       city: formData.city,
       state: formData.state,
       zip: formData.zip
+
     };
 
     const { data, error } = await supabase.rpc('create_order_and_update_inventory', {
