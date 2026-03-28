@@ -1050,7 +1050,7 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
               Handcrafted ribbon and faux botanical leis originating in Tallahassee, Florida.
             </p>
             <div className="flex space-x-6">
-              <a href="https://instagram.com/__satinandstem" target="_blank" rel="noreferrer" className="hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}><Instagram size={18} strokeWidth={1.5} /></a>
+              <a href="https://instagram.com/satinandstemshop" target="_blank" rel="noreferrer" className="hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}><Instagram size={18} strokeWidth={1.5} /></a>
               <a href="mailto:satinandstem@protonmail.com" className="hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}><Mail size={18} strokeWidth={1.5} /></a>
             </div>
           </div>
