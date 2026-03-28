@@ -503,15 +503,23 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
   );
 };
 
+// --- EDITED: Replaced CartPage component to update shipping and address fields (Step 3) ---
 const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const [isCheckout, setIsCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('zelle');
-  const [deliveryMethod, setDeliveryMethod] = useState('pickup');
-  const [formData, setFormData] = useState({ fullName: '', email: '', address: '' });
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    street: '',
+    street2: '',
+    city: '',
+    state: '',
+    zip: ''
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subtotal = cart.reduce((sum, item) => sum + parseInt(item.price.replace('$', '')), 0);
-  const shippingFee = deliveryMethod === 'shipping' ? 15 : 0;
+  const shippingFee = 0; // Free shipping
   const fee = paymentMethod === 'zelle' ? 0 : (subtotal + shippingFee) * 0.03;
   const grandTotal = subtotal + shippingFee + fee;
 
@@ -526,40 +534,64 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
+    // Build items array for DB function
+    const itemsForDb = cart.map(item => ({
+      id: item.id,
+      quantity: 1, // adjust if multiple quantities allowed
+    }));
+    const orderNumber = `ORD-${Date.now()}`;
+
+    // Build shipping address object
+    const shippingAddress = {
+      street: formData.street,
+      street2: formData.street2 || null,
+      city: formData.city,
+      state: formData.state,
+      zip: formData.zip
+    };
+
+    const { data, error } = await supabase.rpc('create_order_and_update_inventory', {
+      order_number: orderNumber,
+      customer_name: formData.fullName,
+      customer_email: formData.email,
+      items: itemsForDb,
+      total: `$${grandTotal.toFixed(2)}`,
+      payment_method: paymentMethod,
+      delivery_method: 'shipping',
+      shipping_address: shippingAddress,
+    });
+
+    if (error) {
+      setIsSubmitting(false);
+      showToast('Error placing order. Please try again.');
+      console.error(error);
+      return;
+    }
+
+    // Send email notification
     const cartHtml = cart.map(item => `<li>${item.name} - ${item.price}</li>`).join('');
-    
     const html = `
       <h2>New Order Request</h2>
       <p><strong>Name:</strong> ${formData.fullName}</p>
       <p><strong>Email:</strong> ${formData.email}</p>
       <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-      <p><strong>Delivery Method:</strong> ${deliveryMethod}</p>
-      ${deliveryMethod === 'shipping' ? `<p><strong>Address:</strong> ${formData.address}</p>` : ''}
+      <p><strong>Shipping Address:</strong><br/>
+      ${formData.street}<br/>
+      ${formData.street2 ? formData.street2 + '<br/>' : ''}
+      ${formData.city}, ${formData.state} ${formData.zip}</p>
       <h3>Items:</h3>
       <ul>${cartHtml}</ul>
       <p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
-      <p><strong>Shipping:</strong> $${shippingFee.toFixed(2)}</p>
+      <p><strong>Shipping:</strong> Free</p>
       <p><strong>App Processing Fee:</strong> $${fee.toFixed(2)}</p>
       <p><strong>Total:</strong> $${grandTotal.toFixed(2)}</p>
     `;
 
     await sendResendEmail('New Order Request from ' + formData.fullName, html);
-    
-    // Save order to Supabase
-    await supabase.from('orders').insert({
-      order_number: `ORD-${Date.now()}`,
-      customer_name: formData.fullName,
-      customer_email: formData.email,
-      items: cart,
-      total: `$${grandTotal.toFixed(2)}`,
-      payment_method: paymentMethod,
-      delivery_method: deliveryMethod,
-      status: 'Pending Payment',
-    });
-    
+
     setIsSubmitting(false);
-    showToast(`Order Request Sent! We will contact you to complete your ${paymentMethod.toUpperCase()} payment.`);
+    showToast(`Order placed! Inventory updated. We'll contact you to complete payment.`);
     setCart([]);
     setCurrentView('home');
   };
@@ -567,18 +599,16 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   return (
     <div className="py-20 bg-[#FCFBFB] min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <button 
+        <button
           onClick={() => setCurrentView('home')}
           className="flex items-center font-sleek text-sm tracking-widest uppercase mb-12 hover:opacity-60 transition-opacity"
           style={{ color: colors.deepRosewood }}
         >
           <ChevronLeft size={16} className="mr-2" strokeWidth={1} /> Continue Shopping
         </button>
-
         <h2 className="text-4xl font-elegant mb-12 border-b pb-6" style={{ color: colors.deepRosewood, borderColor: colors.lavenderBlush }}>
           {isCheckout ? "Complete Request" : "Your Selection"}
         </h2>
-
         {cart.length === 0 ? (
           <p className="font-sleek text-lg" style={{ color: colors.mutedMauve }}>Your cart is beautifully empty.</p>
         ) : (
@@ -599,7 +629,6 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                 </div>
               ))}
             </div>
-
             <div className="w-full md:w-80 bg-white border p-6 h-fit" style={{ borderColor: colors.lavenderBlush }}>
               {!isCheckout ? (
                 <>
@@ -607,7 +636,11 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                     <span>Subtotal</span>
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
-                  <button 
+                  <div className="flex justify-between mb-4 font-sleek text-sm" style={{ color: colors.deepRosewood }}>
+                    <span>Shipping</span>
+                    <span>Free</span>
+                  </div>
+                  <button
                     onClick={() => setIsCheckout(true)}
                     className="w-full mt-6 py-4 font-sleek text-xs tracking-widest uppercase text-white transition-opacity hover:opacity-90"
                     style={{ backgroundColor: colors.dustyOrchid }}
@@ -623,43 +656,22 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                   <div>
                     <input type="email" name="email" value={formData.email} onChange={handleFormChange} placeholder="Email Address" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
                   </div>
-                  
                   <div className="pt-4 border-t" style={{ borderColor: colors.powderedLilac }}>
-                    <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Delivery Method</label>
-                    <select 
-                      value={deliveryMethod}
-                      onChange={(e) => setDeliveryMethod(e.target.value)}
-                      className="w-full bg-transparent border py-2 px-3 focus:outline-none font-sleek text-sm mb-2" 
-                      style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
-                    >
-                      <option value="pickup">Local Meetup (Tallahassee - Free)</option>
-                      <option value="shipping">US Shipping (+$15.00)</option>
-                    </select>
-                    
-                    {deliveryMethod === 'pickup' ? (
-                      <p className="font-sleek text-xs italic" style={{ color: colors.mutedMauve }}>
-                        We will email you to coordinate a safe, public meetup location.
-                      </p>
-                    ) : (
-                      <textarea 
-                        required 
-                        name="address"
-                        value={formData.address}
-                        onChange={handleFormChange}
-                        placeholder="Shipping Address (US Only)" 
-                        className="w-full bg-transparent border-b py-2 mt-2 focus:outline-none font-sleek text-sm resize-none" 
-                        rows="2" 
-                        style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
-                      ></textarea>
-                    )}
+                    <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Shipping Address</label>
+                    <input type="text" name="street" value={formData.street} onChange={handleFormChange} placeholder="Street Address" required className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                    <input type="text" name="street2" value={formData.street2} onChange={handleFormChange} placeholder="Apt, Suite, etc. (optional)" className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="text" name="city" value={formData.city} onChange={handleFormChange} placeholder="City" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                      <input type="text" name="state" value={formData.state} onChange={handleFormChange} placeholder="State" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                    </div>
+                    <input type="text" name="zip" value={formData.zip} onChange={handleFormChange} placeholder="ZIP Code" required className="w-full bg-transparent border-b py-2 mt-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
                   </div>
-
                   <div className="pt-4 border-t" style={{ borderColor: colors.powderedLilac }}>
                     <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Payment Method</label>
-                    <select 
+                    <select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full bg-transparent border py-2 px-3 focus:outline-none font-sleek text-sm mb-2" 
+                      className="w-full bg-transparent border py-2 px-3 focus:outline-none font-sleek text-sm mb-2"
                       style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
                     >
                       <option value="zelle">Zelle (No Fee)</option>
@@ -668,15 +680,13 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                       <option value="paypal">PayPal (+3% Fee)</option>
                     </select>
                   </div>
-
                   <div className="pt-4 border-t space-y-2 font-sleek text-sm" style={{ borderColor: colors.powderedLilac, color: colors.deepRosewood }}>
                     <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                    {shippingFee > 0 && <div className="flex justify-between"><span>US Shipping</span><span>${shippingFee.toFixed(2)}</span></div>}
+                    <div className="flex justify-between"><span>Shipping</span><span>Free</span></div>
                     {fee > 0 && <div className="flex justify-between text-red-400"><span>App Processing Fee</span><span>${fee.toFixed(2)}</span></div>}
                     <div className="flex justify-between font-medium pt-2 text-lg"><span>Total</span><span>${grandTotal.toFixed(2)}</span></div>
                   </div>
-
-                  <button 
+                  <button
                     type="submit"
                     disabled={isSubmitting}
                     className="w-full mt-6 py-4 font-sleek text-xs tracking-widest uppercase text-white transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -693,8 +703,8 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     </div>
   );
 };
+// --- END EDIT ---
 
-// --- EDITED: Replaced AdminLogin component to use Supabase Auth (Step 3) ---
 const AdminLogin = ({ setCurrentView, showToast }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -745,16 +755,13 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
     </div>
   );
 };
-// --- END EDIT ---
 
-// --- UPDATED AdminDashboard Component (with inquiry reply/mark functionality) ---
 const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) => {
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [updatingInquiry, setUpdatingInquiry] = useState(null);
 
-  // --- EDITED: Added useEffect to protect AdminDashboard and restrict user (Steps 4 & 6) ---
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -766,7 +773,6 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
     };
     checkUser();
   }, []);
-  // --- END EDIT ---
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -841,14 +847,11 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
     }
   };
 
-  // --- New functions for inquiries ---
   const handleReply = (inquiry) => {
-    // Open default mail client with the inquiry's email
     window.location.href = `mailto:${inquiry.email}?subject=Re: Your Satin & Stem custom inquiry`;
   };
 
   const handleMarkAsRead = async (inquiry) => {
-    // Confirm before marking
     const confirmed = window.confirm(`Did you reply to ${inquiry.name}? Mark this inquiry as "Responded"?`);
     if (!confirmed) return;
 
@@ -862,7 +865,6 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
     if (error) {
       showToast('Error updating inquiry status');
     } else {
-      // Update local state
       setInquiries(inquiries.map(i => i.id === inquiry.id ? { ...i, status: 'Responded' } : i));
       showToast(`Inquiry from ${inquiry.name} marked as responded.`);
     }
@@ -870,7 +872,6 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
 
   return (
     <div className="min-h-screen bg-[#F9F9F9] flex flex-col md:flex-row font-sans">
-      {/* Sidebar – unchanged */}
       <div className="w-full md:w-64 bg-white border-r min-h-screen flex flex-col" style={{ borderColor: '#EAEAEA' }}>
         <div className="p-6 border-b" style={{ borderColor: '#EAEAEA' }}>
           <span className="font-elegant text-2xl tracking-wide" style={{ color: colors.dustyOrchid }}>Satin & Stem</span>
@@ -888,17 +889,14 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
           </button>
         </div>
         <div className="p-4 border-t" style={{ borderColor: '#EAEAEA' }}>
-          {/* --- EDITED: Updated sign-out functionality (Step 5) --- */}
           <button onClick={async () => { await supabase.auth.signOut(); showToast('Logged out securely.'); setCurrentView('home'); }} className="w-full flex items-center space-x-3 px-4 py-3 text-gray-500 hover:text-red-500 transition-colors font-sleek text-sm">
             <LogOut size={18} strokeWidth={1.5} /> <span>Sign Out</span>
           </button>
-          {/* --- END EDIT --- */}
         </div>
       </div>
 
       <div className="flex-1 p-8 md:p-12 overflow-y-auto h-screen">
         {activeTab === 'orders' && (
-          // --- Orders Table (unchanged from original) ---
           <div>
             <h2 className="text-3xl font-elegant mb-2" style={{ color: colors.deepRosewood }}>Order Requests</h2>
             <p className="font-sleek text-sm text-gray-500 mb-8">Review incoming orders and update their fulfillment status.</p>
@@ -947,7 +945,6 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
         )}
 
         {activeTab === 'inquiries' && (
-          // --- Inquiries Section (updated with new functionality) ---
           <div>
             <h2 className="text-3xl font-elegant mb-2" style={{ color: colors.deepRosewood }}>Custom Inquiries</h2>
             <p className="font-sleek text-sm text-gray-500 mb-8">Review and respond to special requests.</p>
@@ -1001,7 +998,6 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
         )}
 
         {activeTab === 'inventory' && (
-          // --- Inventory Table (unchanged from original) ---
           <div>
             <h2 className="text-3xl font-elegant mb-8" style={{ color: colors.deepRosewood }}>Inventory Management</h2>
             {Object.entries(products).map(([category, items]) => (
