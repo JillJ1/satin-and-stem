@@ -294,8 +294,9 @@ const CollectionPage = ({ categoryKey, title, description, setCurrentView, showT
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {categoryProducts?.map((item) => {
-            const inCartCount = cart.filter(cartItem => cartItem.id === item.id).length;
-            const available = item.inventory - inCartCount;
+            // --- EDITED: Update availability calculation (show actual inventory only) ---
+            const available = item.inventory;
+            // --- END EDIT ---
 
             return (
               <div key={item.id} className="group">
@@ -384,20 +385,18 @@ const InventoryRow = ({ item, category, onSave }) => {
   );
 };
 
+// --- EDITED: Replaced CustomOrderPage to remove delivery logic ---
 const CustomOrderPage = ({ setCurrentView, showToast }) => {
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 30);
   const minDateString = minDate.toISOString().split('T')[0];
-
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', date: '', details: '', delivery: 'pickup', notes: ''
+    firstName: '', lastName: '', email: '', date: '', details: '', notes: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -408,13 +407,11 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
       <p><strong>Email:</strong> ${formData.email}</p>
       <p><strong>Needed By:</strong> ${formData.date}</p>
       <p><strong>Details/Colors:</strong> ${formData.details}</p>
-      <p><strong>Delivery:</strong> ${formData.delivery}</p>
       <p><strong>Notes:</strong> ${formData.notes}</p>
     `;
     
     await sendResendEmail('New Custom Inquiry from ' + formData.firstName, html);
     
-    // Also save to Supabase (optional)
     await supabase.from('inquiries').insert({
       name: `${formData.firstName} ${formData.lastName}`,
       email: formData.email,
@@ -426,7 +423,6 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
     showToast("Inquiry sent! We will be in touch shortly.");
     setTimeout(() => setCurrentView('home'), 3000);
   };
-
   return (
     <div className="py-20 bg-[#FCFBFB] min-h-screen">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -437,7 +433,6 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
         >
           <ChevronLeft size={16} className="mr-2" strokeWidth={1} /> Back to Home
         </button>
-
         <div className="text-center mb-16">
           <h2 className="text-5xl font-elegant mb-6" style={{ color: colors.deepRosewood }}>Custom Inquiry</h2>
           <p className="font-sleek text-lg max-w-2xl mx-auto font-light" style={{ color: colors.mutedMauve }}>
@@ -447,7 +442,6 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
             Please note: We require at least 30 days notice to complete all custom orders.
           </p>
         </div>
-
         <div className="bg-white border p-8 md:p-12 shadow-sm" style={{ borderColor: colors.lavenderBlush }}>
           <form className="space-y-8" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -460,7 +454,6 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
                 <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} required className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] transition-colors font-sleek" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} />
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                 <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Email Address</label>
@@ -471,26 +464,14 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
                 <input type="date" name="date" value={formData.date} onChange={handleChange} required min={minDateString} className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] transition-colors font-sleek uppercase text-sm" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} />
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>School, Organization, or Desired Colors</label>
-                <input type="text" name="details" value={formData.details} onChange={handleChange} placeholder="e.g., FSU, Delta Sigma Theta, Sage & Blush..." className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] transition-colors font-sleek placeholder-opacity-40" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} />
-              </div>
-              <div>
-                <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Delivery Preference</label>
-                <select name="delivery" value={formData.delivery} onChange={handleChange} className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] transition-colors font-sleek text-sm" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}>
-                  <option value="pickup">Local Meetup (Tallahassee - Free)</option>
-                  <option value="shipping">US Shipping (+$15 Fee)</option>
-                </select>
-              </div>
+            <div>
+              <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>School, Organization, or Desired Colors</label>
+              <input type="text" name="details" value={formData.details} onChange={handleChange} placeholder="e.g., FSU, Delta Sigma Theta, Sage & Blush..." className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] transition-colors font-sleek placeholder-opacity-40" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} />
             </div>
-
             <div>
               <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Design Details</label>
               <textarea rows="4" name="notes" value={formData.notes} onChange={handleChange} placeholder="Tell us more about what you're looking for..." className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] transition-colors font-sleek placeholder-opacity-40 resize-none" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}></textarea>
             </div>
-
             <div className="pt-4 text-center">
               <button type="submit" disabled={isSubmitting} className="font-sleek text-sm tracking-widest uppercase py-4 px-12 border transition-all hover:bg-[#F4DFE6] disabled:opacity-50" style={{ color: colors.deepRosewood, borderColor: colors.deepRosewood }}>
                 {isSubmitting ? 'Sending...' : 'Submit Inquiry'}
@@ -502,8 +483,8 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
     </div>
   );
 };
+// --- END EDIT ---
 
-// --- EDITED: Replaced CartPage component to update shipping and address fields (Step 3) ---
 const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const [isCheckout, setIsCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('zelle');
@@ -703,7 +684,6 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     </div>
   );
 };
-// --- END EDIT ---
 
 const AdminLogin = ({ setCurrentView, showToast }) => {
   const [email, setEmail] = useState('');
