@@ -1457,27 +1457,41 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
 };
 
 // --- Coming Soon Page Component ---
-const ComingSoonPage = () => {
+const ComingSoonPage = ({ setCurrentView }) => {
   return (
-    <div className="min-h-screen bg-[#FCFBFB] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#FCFBFB] flex items-center justify-center px-4 relative">
+      {/* Hidden admin lock icon in top-right corner */}
+      <button
+        onClick={() => setCurrentView('admin-login')}
+        className="absolute top-6 right-6 opacity-20 hover:opacity-100 transition-opacity"
+        title="Admin Login"
+      >
+        <Lock size={20} strokeWidth={1} />
+      </button>
+
       <div className="text-center max-w-2xl">
         <div className="mb-8">
-          <span className="font-elegant text-6xl tracking-wide" style={{ color: colors.dustyOrchid }}>
+          <h1 className="font-elegant text-6xl md:text-7xl tracking-wide" style={{ color: colors.dustyOrchid }}>
             Satin & Stem
-          </span>
+          </h1>
         </div>
-        <h1 className="font-elegant text-4xl md:text-6xl mb-6" style={{ color: colors.deepRosewood }}>
+        <h2 className="font-elegant text-4xl md:text-6xl mb-6" style={{ color: colors.deepRosewood }}>
           Coming Soon
-        </h1>
+        </h2>
         <p className="font-sleek text-lg text-gray-600 mb-8">
-          We're preparing something beautiful for you. 
+          We're preparing something beautiful for you.<br />
           Be the first to know when we launch.
         </p>
-        <div className="inline-block border-b border-[#D56989] pb-1">
+        <a
+          href="https://instagram.com/satinandstemshop"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block border-b border-[#D56989] pb-1 hover:opacity-70 transition-opacity"
+        >
           <span className="font-sleek text-sm tracking-widest uppercase" style={{ color: colors.dustyOrchid }}>
             Follow us on Instagram
           </span>
-        </div>
+        </a>
       </div>
     </div>
   );
@@ -1544,7 +1558,7 @@ export default function App() {
 
   // Coming soon mode: show coming soon page unless admin route
   if (comingSoon && !currentView.startsWith('admin')) {
-    return <ComingSoonPage />;
+      return <ComingSoonPage setCurrentView={setCurrentView} />;
   }
 
   return (
