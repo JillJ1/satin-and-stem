@@ -694,14 +694,26 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   );
 };
 
+// --- EDITED: Replaced AdminLogin component to use Supabase Auth (Step 3) ---
 const AdminLogin = ({ setCurrentView, showToast }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    showToast('Welcome back, Admin.');
-    setCurrentView('admin-dashboard');
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+    if (error) {
+      showToast('Invalid email or password');
+    } else {
+      showToast('Welcome, Admin.');
+      setCurrentView('admin-dashboard');
+    }
   };
 
   return (
@@ -711,19 +723,19 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
         <div className="text-center mb-10">
           <Lock size={32} strokeWidth={1} className="mx-auto mb-4" style={{ color: colors.dustyOrchid }} />
           <h2 className="text-3xl font-elegant" style={{ color: colors.deepRosewood }}>Admin Portal</h2>
-          <p className="font-sleek text-sm mt-2" style={{ color: colors.mutedMauve }}>Secure access for Satin & Stem.</p>
+          <p className="font-sleek text-sm mt-2" style={{ color: colors.mutedMauve }}>Sign in to manage your store.</p>
         </div>
         <form className="space-y-6" onSubmit={handleLogin}>
           <div>
             <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Email</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} placeholder="satinandstem@protonmail.com" />
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} placeholder="admin@satinandstem.shop" />
           </div>
           <div>
             <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Password</label>
             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} placeholder="••••••••" />
           </div>
-          <button type="submit" className="w-full mt-6 py-3 font-sleek text-xs tracking-widest uppercase text-white transition-opacity hover:opacity-90" style={{ backgroundColor: colors.deepRosewood }}>
-            Sign In
+          <button type="submit" disabled={loading} className="w-full mt-6 py-3 font-sleek text-xs tracking-widest uppercase text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: colors.deepRosewood }}>
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
         <button onClick={() => setCurrentView('home')} className="mt-8 text-center w-full font-sleek text-xs uppercase tracking-widest hover:text-[#D56989] transition-colors" style={{ color: colors.mutedMauve }}>
@@ -733,6 +745,7 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
     </div>
   );
 };
+// --- END EDIT ---
 
 // --- UPDATED AdminDashboard Component (with inquiry reply/mark functionality) ---
 const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) => {
@@ -740,6 +753,20 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
   const [orders, setOrders] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [updatingInquiry, setUpdatingInquiry] = useState(null);
+
+  // --- EDITED: Added useEffect to protect AdminDashboard and restrict user (Steps 4 & 6) ---
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const allowedEmail = 'admin@satinandstem.shop';
+      if (!session || session?.user?.email !== allowedEmail) {
+        setCurrentView('admin-login');
+        showToast('Please log in to access the dashboard.');
+      }
+    };
+    checkUser();
+  }, []);
+  // --- END EDIT ---
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -861,9 +888,11 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts }) =>
           </button>
         </div>
         <div className="p-4 border-t" style={{ borderColor: '#EAEAEA' }}>
-          <button onClick={() => { showToast('Logged out securely.'); setCurrentView('home'); }} className="w-full flex items-center space-x-3 px-4 py-3 text-gray-500 hover:text-red-500 transition-colors font-sleek text-sm">
+          {/* --- EDITED: Updated sign-out functionality (Step 5) --- */}
+          <button onClick={async () => { await supabase.auth.signOut(); showToast('Logged out securely.'); setCurrentView('home'); }} className="w-full flex items-center space-x-3 px-4 py-3 text-gray-500 hover:text-red-500 transition-colors font-sleek text-sm">
             <LogOut size={18} strokeWidth={1.5} /> <span>Sign Out</span>
           </button>
+          {/* --- END EDIT --- */}
         </div>
       </div>
 
