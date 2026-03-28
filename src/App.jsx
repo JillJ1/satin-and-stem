@@ -274,7 +274,7 @@ const CollectionsSection = ({ setCurrentView }) => {
   );
 };
 
-// CHANGED: CollectionPage Component (availability calculation updated)
+// UNCHANGED: CollectionPage Component
 const CollectionPage = ({ categoryKey, title, description, setCurrentView, showToast, addToCart, cart, products }) => {
   const categoryProducts = products[categoryKey];
 
@@ -297,9 +297,7 @@ const CollectionPage = ({ categoryKey, title, description, setCurrentView, showT
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {categoryProducts?.map((item) => {
-            // CHANGED: Update availability calculation (show actual inventory only)
             const available = item.inventory;
-            // UNCHANGED: rest of the map function
 
             return (
               <div key={item.id} className="group">
@@ -389,7 +387,7 @@ const InventoryRow = ({ item, category, onSave }) => {
   );
 };
 
-// CHANGED: CustomOrderPage Component (replaced entirely to remove delivery logic)
+// UNCHANGED: CustomOrderPage Component
 const CustomOrderPage = ({ setCurrentView, showToast }) => {
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 30);
@@ -689,12 +687,11 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   );
 };
 
-// UNCHANGED: AdminLogin Component
+// CHANGED: AdminLogin Component (added name attributes)
 const AdminLogin = ({ setCurrentView, showToast }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -710,7 +707,6 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
       setCurrentView('admin-dashboard');
     }
   };
-
   return (
     <div className="min-h-screen bg-[#F3EEF1] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="absolute inset-0 stripe-bg opacity-30"></div>
@@ -723,11 +719,29 @@ const AdminLogin = ({ setCurrentView, showToast }) => {
         <form className="space-y-6" onSubmit={handleLogin}>
           <div>
             <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Email</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} placeholder="admin@satinandstem.shop" />
+            <input
+              type="email"
+              name="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm"
+              style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
+              placeholder="admin@satinandstem.shop"
+            />
           </div>
           <div>
             <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Password</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm" style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }} placeholder="••••••••" />
+            <input
+              type="password"
+              name="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-transparent border-b py-2 focus:outline-none focus:border-[#D56989] font-sleek text-sm"
+              style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
+              placeholder="••••••••"
+            />
           </div>
           <button type="submit" disabled={loading} className="w-full mt-6 py-3 font-sleek text-xs tracking-widest uppercase text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: colors.deepRosewood }}>
             {loading ? 'Signing in...' : 'Sign In'}
