@@ -1718,8 +1718,15 @@ export default function App() {
   };
 
   const addToCart = (product) => {
-    setCart([...cart, product]);
-    showToast(`Added ${product.name} to Cart`);
+  // Count how many of this product are already in the cart
+  const currentCount = cart.filter(item => item.id === product.id).length;
+  if (currentCount + 1 > product.inventory) {
+    showToast(`Only ${product.inventory} available. Cannot add more.`);
+    return;
+  }
+  setCart([...cart, product]);
+  showToast(`Added ${product.name} to Cart`);
+};
   };
 
   const isPublicView = !currentView.startsWith('admin');
