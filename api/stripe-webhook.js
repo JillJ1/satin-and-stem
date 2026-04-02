@@ -1,23 +1,33 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import getRawBody from 'raw-body';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export const config = {
+  api: {
+    bodyParser: false, // Disable automatic body parsing
+  },
+};
+
 export default async function handler(req, res) {
   console.log('🔔 Webhook received. Method:', req.method);
-  
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Get the raw request body as a string
+  const rawBody = await getRawBody(req);
   const sig = req.headers['stripe-signature'];
+
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
     console.log('✅ Event constructed:', event.type);
   } catch (err) {
     console.error('❌ Webhook signature verification failed:', err.message);
@@ -57,7 +67,6 @@ export default async function handler(req, res) {
     const cartHtml = order.items.map(item => `<li>${item.name} - ${item.price}</li>`).join('');
     const address = order.shipping_address || {};
 
-    // 1. Customer email
     const customerHtml = `
       <h2>Thank you for your order, ${order.customer_name}!</h2>
       <p><strong>Order #${orderNumber}</strong></p>
@@ -72,7 +81,6 @@ export default async function handler(req, res) {
       <p>Thank you for supporting Satin & Stem!</p>
     `;
 
-    // 2. Admin email
     const adminHtml = `
       <h2>New Order #${orderNumber}</h2>
       <p><strong>Customer:</strong> ${order.customer_name} (${order.customer_email})</p>
@@ -98,7 +106,7 @@ export default async function handler(req, res) {
             'Authorization': `Bearer ${resendApiKey}`,
           },
           body: JSON.stringify({
-            from: 'Satin & Stem <onboarding@resend.dev>',
+            from: 'Satin & Stem <hello@satinandstem.shop>',
             to: order.customer_email,
             subject: `Your Satin & Stem order #${orderNumber}`,
             html: customerHtml,
@@ -123,7 +131,7 @@ export default async function handler(req, res) {
             'Authorization': `Bearer ${resendApiKey}`,
           },
           body: JSON.stringify({
-           from: 'Satin & Stem <hello@satinandstem.shop>',
+            from: 'Satin & Stem <hello@satinandstem.shop>',
             to: 'satinandstem@protonmail.com',
             subject: `New Order #${orderNumber}`,
             html: adminHtml,
