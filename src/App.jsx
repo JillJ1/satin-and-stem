@@ -674,6 +674,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   setIsSubmitting(true);
 
   // Build items array with full details for email and order history
+  console.log('Cart items:', cart);
   const itemsForDb = cart.map(item => ({
     id: item.id,
     quantity: 1,
