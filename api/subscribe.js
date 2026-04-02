@@ -36,7 +36,7 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify({
-          from: 'Satin & Stem <onboarding@resend.dev>',
+          from: 'Satin & Stem <hello@satinandstem.shop>',
           to: email,
           subject: 'Welcome to Satin & Stem',
           html: '<h2>Welcome to Satin & Stem!</h2><p>Thank you for subscribing. You’ll receive updates on new collections and special offers.</p>',

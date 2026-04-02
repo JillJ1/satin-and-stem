@@ -123,7 +123,7 @@ export default async function handler(req, res) {
             'Authorization': `Bearer ${resendApiKey}`,
           },
           body: JSON.stringify({
-            from: 'Satin & Stem <onboarding@resend.dev>',
+           from: 'Satin & Stem <hello@satinandstem.shop>',
             to: 'satinandstem@protonmail.com',
             subject: `New Order #${orderNumber}`,
             html: adminHtml,
