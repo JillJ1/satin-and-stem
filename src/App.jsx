@@ -1157,26 +1157,27 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
 
   const [printing, setPrinting] = useState({});
   const printLabel = async (order) => {
-    setPrinting({ ...printing, [order.id]: true });
-    try {
-      const response = await fetch('/api/shipping/label', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order }),
-      });
-      const data = await response.json();
-      if (response.ok && data.label_url) {
-        window.open(data.label_url, '_blank');
-      } else {
-        showToast('Error generating label: ' + (data.error || 'Unknown error'));
-      }
-    } catch (err) {
-      showToast('Failed to generate label');
-      console.error(err);
-    } finally {
-      setPrinting({ ...printing, [order.id]: false });
+  setPrinting({ ...printing, [order.id]: true });
+  try {
+    const response = await fetch('/api/shipping/label', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order }),
+    });
+    const data = await response.json();
+    console.log('Label response:', data);   // add this
+    if (response.ok && data.label_url) {
+      window.open(data.label_url, '_blank');
+    } else {
+      showToast('Error generating label: ' + (data.error || 'Unknown error'));
     }
-  };
+  } catch (err) {
+    showToast('Failed to generate label');
+    console.error(err);
+  } finally {
+    setPrinting({ ...printing, [order.id]: false });
+  }
+};
 
   const handleCreateDiscount = async () => {
     const { data, error } = await supabase
