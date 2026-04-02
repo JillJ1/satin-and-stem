@@ -723,20 +723,8 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     }
   };
 
-  // After successful payment, Stripe redirects back
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      showToast('Payment successful! Your order is confirmed.');
-      setCart([]);
-      setCurrentView('home');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    if (urlParams.get('canceled') === 'true') {
-      showToast('Payment canceled. You can try again.');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
+  // (REMOVED: The old useEffect that listened for ?success and redirected to home.
+  // That logic is now handled in the main App component.)
 
   // JSX (same as your current CartPage, but with Stripe button and discount)
   return (
@@ -885,6 +873,30 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// ---------- NEW: Thank You Page ----------
+const ThankYouPage = ({ setCurrentView }) => {
+  return (
+    <div className="min-h-screen bg-[#FCFBFB] flex items-center justify-center px-4">
+      <div className="text-center max-w-2xl">
+        <div className="mb-6">
+          <CheckCircle size={64} className="mx-auto mb-4" style={{ color: colors.mossGreen }} />
+          <h1 className="font-elegant text-5xl mb-4" style={{ color: colors.deepRosewood }}>Thank You!</h1>
+          <p className="font-sleek text-lg text-gray-600 mb-6">
+            Your payment was successful. We've sent a confirmation email to you and will begin processing your order.
+          </p>
+          <button
+            onClick={() => setCurrentView('home')}
+            className="font-sleek text-sm tracking-widest uppercase py-3 px-8 border transition-all hover:bg-[#F4DFE6]"
+            style={{ color: colors.deepRosewood, borderColor: colors.deepRosewood }}
+          >
+            Continue Shopping
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1100,7 +1112,6 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
     }
   };
 
-  // --- NEW: Convert Inquiry to Order ---
   const convertInquiryToOrder = async (inquiry) => {
     const confirmed = window.confirm(`Create an order from ${inquiry.name}'s inquiry?`);
     if (!confirmed) return;
@@ -1233,6 +1244,7 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
                   <tr>
                     <th className="px-6 py-4 font-medium">Order ID</th>
                     <th className="px-6 py-4 font-medium">Customer</th>
+                    <th className="px-6 py-4 font-medium">Items</th>
                     <th className="px-6 py-4 font-medium">Payment</th>
                     <th className="px-6 py-4 font-medium">Total</th>
                     <th className="px-6 py-4 font-medium">Delivery</th>
@@ -1246,7 +1258,10 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
                       <td className="px-6 py-4 font-medium" style={{ color: colors.deepRosewood }}>{order.order_number}</td>
                       <td className="px-6 py-4 text-gray-600">
                         {order.customer_name}<br/>
-                        <span className="text-xs text-gray-400">{order.items?.map(i => i.name).join(', ')}</span>
+                        <span className="text-xs text-gray-400">{order.customer_email}</span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">
+                        {order.items?.map(i => i.name).join(', ')}
                       </td>
                       <td className="px-6 py-4 text-gray-600">{order.payment_method}</td>
                       <td className="px-6 py-4 text-gray-600">{order.total}</td>
@@ -1286,41 +1301,41 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
             <h2 className="text-3xl font-elegant mb-2" style={{ color: colors.deepRosewood }}>Custom Inquiries</h2>
             <p className="font-sleek text-sm text-gray-500 mb-8">Review and respond to special requests.</p>
             <div className="grid grid-cols-1 gap-6">
-              {inquiries.map((inq) => (
-                <div
-                  key={inq.id}
-                  className={`bg-white border p-6 rounded-lg shadow-sm transition-all ${inq.status === 'Responded' ? 'opacity-60 grayscale-[0.1] bg-gray-50' : ''}`}
-                  style={{ borderColor: '#EAEAEA' }}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="font-elegant text-xl" style={{ color: colors.deepRosewood }}>{inq.name}</h4>
-                      <p className="font-sleek text-xs uppercase tracking-widest text-red-400 mt-1">Needed by: {inq.needed_by}</p>
-                      <p className="font-sleek text-xs text-gray-400 mt-1">Email: {inq.email}</p>
+              {inquiries.map((inq) => {
+                const isConverted = inq.status === 'Converted';
+                return (
+                  <div
+                    key={inq.id}
+                    className={`bg-white border p-6 rounded-lg shadow-sm transition-all ${isConverted ? 'opacity-60 grayscale-[0.1] bg-gray-50' : ''}`}
+                    style={{ borderColor: '#EAEAEA' }}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-elegant text-xl" style={{ color: colors.deepRosewood }}>{inq.name}</h4>
+                        <p className="font-sleek text-xs uppercase tracking-widest text-red-400 mt-1">Needed by: {inq.needed_by}</p>
+                        <p className="font-sleek text-xs text-gray-400 mt-1">Email: {inq.email}</p>
+                      </div>
+                      <span className="px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border"
+                        style={{
+                          backgroundColor: isConverted ? '#e2e8f0' : (inq.status === 'Responded' ? '#e2e8f0' : '#dbeafe'),
+                          borderColor: isConverted ? '#cbd5e1' : (inq.status === 'Responded' ? '#cbd5e1' : '#bfdbfe'),
+                          color: isConverted ? '#4b5563' : (inq.status === 'Responded' ? '#4b5563' : '#1e40af')
+                        }}>
+                        {inq.status === 'Converted' ? 'Converted' : (inq.status === 'Responded' ? 'Responded' : 'Unread')}
+                      </span>
                     </div>
-                    {/* Updated status badge with "Converted" */}
-                    <span className="px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border"
-                          style={{
-                            backgroundColor: inq.status === 'Converted' ? '#e2e8f0' : (inq.status === 'Responded' ? '#e2e8f0' : '#dbeafe'),
-                            borderColor: inq.status === 'Converted' ? '#cbd5e1' : (inq.status === 'Responded' ? '#cbd5e1' : '#bfdbfe'),
-                            color: inq.status === 'Converted' ? '#4b5563' : (inq.status === 'Responded' ? '#4b5563' : '#1e40af')
-                          }}>
-                      {inq.status === 'Converted' ? 'Converted' : (inq.status === 'Responded' ? 'Responded' : 'Unread')}
-                    </span>
-                  </div>
-                  <p className="font-sleek text-sm text-gray-600 leading-relaxed border-l-2 pl-4" style={{ borderColor: colors.powderedLilac }}>
-                    "{inq.details}"
-                  </p>
-                  <div className="mt-6 pt-4 border-t flex justify-end space-x-4" style={{ borderColor: '#EAEAEA' }}>
-                    <button
-                      onClick={() => handleReply(inq)}
-                      className="text-xs font-sleek uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90"
-                      style={{ backgroundColor: colors.dustyOrchid }}
-                    >
-                      Reply
-                    </button>
-                    {inq.status !== 'Responded' && inq.status !== 'Converted' && (
-                      <>
+                    <p className="font-sleek text-sm text-gray-600 leading-relaxed border-l-2 pl-4" style={{ borderColor: colors.powderedLilac }}>
+                      "{inq.details}"
+                    </p>
+                    <div className="mt-6 pt-4 border-t flex justify-end space-x-4" style={{ borderColor: '#EAEAEA' }}>
+                      <button
+                        onClick={() => handleReply(inq)}
+                        className="text-xs font-sleek uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90"
+                        style={{ backgroundColor: colors.dustyOrchid }}
+                      >
+                        Reply
+                      </button>
+                      {inq.status !== 'Responded' && inq.status !== 'Converted' && (
                         <button
                           onClick={() => handleMarkAsRead(inq)}
                           disabled={updatingInquiry === inq.id}
@@ -1328,18 +1343,20 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
                         >
                           {updatingInquiry === inq.id ? 'Updating...' : 'Mark as Read (Email Sent?)'}
                         </button>
+                      )}
+                      {inq.status !== 'Converted' && (
                         <button
                           onClick={() => convertInquiryToOrder(inq)}
-                          className="text-xs font-sleek uppercase tracking-widest text-white px-3 py-1 rounded shadow-sm hover:opacity-90"
+                          className="text-xs font-sleek uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90"
                           style={{ backgroundColor: colors.mossGreen }}
                         >
                           Convert to Order
                         </button>
-                      </>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -1643,6 +1660,21 @@ export default function App() {
     fetchSettings();
   }, []);
 
+  // Handle Stripe success redirect and clear cart
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      setCart([]);
+      showToast('Payment successful! Your order is confirmed.');
+      setCurrentView('thank-you');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    if (urlParams.get('canceled') === 'true') {
+      showToast('Payment canceled. You can try again.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentView]);
@@ -1691,6 +1723,7 @@ export default function App() {
 
         {currentView === 'custom' && <CustomOrderPage setCurrentView={setCurrentView} showToast={showToast} />}
         {currentView === 'cart' && <CartPage cart={cart} setCart={setCart} setCurrentView={setCurrentView} showToast={showToast} />}
+        {currentView === 'thank-you' && <ThankYouPage setCurrentView={setCurrentView} />}
 
         {currentView === 'admin-login' && <AdminLogin setCurrentView={setCurrentView} showToast={showToast} />}
         {currentView === 'admin-dashboard' && <AdminDashboard setCurrentView={setCurrentView} showToast={showToast} products={products} setProducts={setProducts} comingSoon={comingSoon} setComingSoon={setComingSoon} />}
