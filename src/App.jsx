@@ -173,7 +173,7 @@ const HeroSection = ({ setCurrentView }) => {
             A Modern Keepsake
           </p>
           <h1 className="text-5xl md:text-7xl font-elegant leading-tight mb-8" style={{ color: colors.deepRosewood }}>
-            Graduation leis,<br />
+            Graduation stoles,<br />
             <span className="italic font-light" style={{ color: colors.dustyOrchid }}>elevated.</span>
           </h1>
           <p className="font-sleek text-lg max-w-md mb-8 font-light leading-relaxed" style={{ color: colors.mutedMauve }}>
@@ -575,7 +575,6 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
 
 const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const [isCheckout, setIsCheckout] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('zelle');
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -590,10 +589,40 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountError, setDiscountError] = useState('');
 
-  const subtotal = cart.reduce((sum, item) => sum + parseInt(item.price.replace('$', '')), 0);
-  const shippingFee = 0; // Free shipping
-  const fee = paymentMethod === 'zelle' ? 0 : (subtotal + shippingFee) * 0.03;
+  // Google Places Autocomplete refs
+  const streetRef = useRef(null);
 
+  useEffect(() => {
+    if (!isCheckout) return;
+
+    // Initialize autocomplete for the street field
+    const autocomplete = new google.maps.places.Autocomplete(streetRef.current, {
+      types: ['address'],
+      componentRestrictions: { country: 'us' }
+    });
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.address_components) return;
+
+      let street = '';
+      let city = '';
+      let state = '';
+      let zip = '';
+      for (const comp of place.address_components) {
+        const types = comp.types;
+        if (types.includes('street_number')) street = comp.long_name;
+        if (types.includes('route')) street += ' ' + comp.long_name;
+        if (types.includes('locality')) city = comp.long_name;
+        if (types.includes('administrative_area_level_1')) state = comp.short_name;
+        if (types.includes('postal_code')) zip = comp.long_name;
+      }
+      setFormData(prev => ({ ...prev, street, city, state, zip }));
+    });
+  }, [isCheckout]);
+
+  // Calculate totals
+  const subtotal = cart.reduce((sum, item) => sum + parseInt(item.price.replace('$', '')), 0);
+  const shippingFee = 0;
   let discountAmount = 0;
   if (appliedDiscount) {
     if (appliedDiscount.type === 'percentage') {
@@ -602,7 +631,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       discountAmount = appliedDiscount.value;
     }
   }
-  const grandTotal = subtotal + shippingFee + fee - discountAmount;
+  const grandTotal = subtotal + shippingFee - discountAmount;
 
   const removeFromCart = (indexToRemove) => {
     setCart(cart.filter((_, index) => index !== indexToRemove));
@@ -624,8 +653,6 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       setDiscountError('Invalid discount code');
       return;
     }
-
-    // Check expiry and usage
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
       setDiscountError('Discount code expired');
       return;
@@ -634,9 +661,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       setDiscountError('Discount code usage limit reached');
       return;
     }
-
     setAppliedDiscount(data);
-    setDiscountCode('');
   };
 
   const removeDiscount = () => {
@@ -648,12 +673,9 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const itemsForDb = cart.map(item => ({
-      id: item.id,
-      quantity: 1,
-    }));
+    // Create the order in Supabase (pending payment)
+    const itemsForDb = cart.map(item => ({ id: item.id, quantity: 1 }));
     const orderNumber = `ORD-${Date.now()}`;
-
     const shippingAddress = {
       street: formData.street,
       street2: formData.street2 || null,
@@ -668,7 +690,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       customer_email: formData.email,
       items: itemsForDb,
       total: `$${grandTotal.toFixed(2)}`,
-      payment_method: paymentMethod,
+      payment_method: 'stripe',
       delivery_method: 'shipping',
       shipping_address: shippingAddress,
     });
@@ -680,37 +702,43 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       return;
     }
 
-    const cartHtml = cart.map(item => `<li>${item.name} - ${item.price}</li>`).join('');
-    let discountHtml = '';
-    if (appliedDiscount) {
-      discountHtml = `<p><strong>Discount (${appliedDiscount.code}):</strong> -$${discountAmount.toFixed(2)}</p>`;
+    // Create Stripe Checkout session
+    const response = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderNumber,
+        total: grandTotal,
+        customerName: formData.fullName,
+        customerEmail: formData.email,
+      }),
+    });
+    const data = await response.json();
+
+    if (response.ok && data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast('Error creating payment session');
+      setIsSubmitting(false);
     }
-    const html = `
-      <h2>New Order Request</h2>
-      <p><strong>Name:</strong> ${formData.fullName}</p>
-      <p><strong>Email:</strong> ${formData.email}</p>
-      <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-      <p><strong>Shipping Address:</strong><br/>
-      ${formData.street}<br/>
-      ${formData.street2 ? formData.street2 + '<br/>' : ''}
-      ${formData.city}, ${formData.state} ${formData.zip}</p>
-      <h3>Items:</h3>
-      <ul>${cartHtml}</ul>
-      <p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
-      <p><strong>Shipping:</strong> Free</p>
-      <p><strong>App Processing Fee:</strong> $${fee.toFixed(2)}</p>
-      ${discountHtml}
-      <p><strong>Total:</strong> $${grandTotal.toFixed(2)}</p>
-    `;
-
-    await sendResendEmail('New Order Request from ' + formData.fullName, html);
-
-    setIsSubmitting(false);
-    showToast(`Order placed! Inventory updated. We'll contact you to complete payment.`);
-    setCart([]);
-    setCurrentView('home');
   };
 
+  // After successful payment, Stripe redirects back
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      showToast('Payment successful! Your order is confirmed.');
+      setCart([]);
+      setCurrentView('home');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    if (urlParams.get('canceled') === 'true') {
+      showToast('Payment canceled. You can try again.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // JSX (same as your current CartPage, but with Stripe button and discount)
   return (
     <div className="py-20 bg-[#FCFBFB] min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -771,9 +799,20 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                   <div>
                     <input type="email" name="email" value={formData.email} onChange={handleFormChange} placeholder="Email Address" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
                   </div>
+
                   <div className="pt-4 border-t" style={{ borderColor: colors.powderedLilac }}>
                     <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Shipping Address</label>
-                    <input type="text" name="street" value={formData.street} onChange={handleFormChange} placeholder="Street Address" required className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                    <input
+                      ref={streetRef}
+                      type="text"
+                      name="street"
+                      value={formData.street}
+                      onChange={handleFormChange}
+                      placeholder="Street Address"
+                      required
+                      className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm"
+                      style={{ borderColor: colors.mutedMauve }}
+                    />
                     <input type="text" name="street2" value={formData.street2} onChange={handleFormChange} placeholder="Apt, Suite, etc. (optional)" className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
                     <div className="grid grid-cols-2 gap-3">
                       <input type="text" name="city" value={formData.city} onChange={handleFormChange} placeholder="City" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
@@ -781,67 +820,50 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                     </div>
                     <input type="text" name="zip" value={formData.zip} onChange={handleFormChange} placeholder="ZIP Code" required className="w-full bg-transparent border-b py-2 mt-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
                   </div>
-                  <div className="pt-4 border-t" style={{ borderColor: colors.powderedLilac }}>
-                    <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Payment Method</label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full bg-transparent border py-2 px-3 focus:outline-none font-sleek text-sm mb-2"
-                      style={{ borderColor: colors.mutedMauve, color: colors.deepRosewood }}
-                    >
-                      <option value="zelle">Zelle (No Fee)</option>
-                      <option value="cashapp">CashApp (+3% Fee)</option>
-                      <option value="venmo">Venmo (+3% Fee)</option>
-                      <option value="paypal">PayPal (+3% Fee)</option>
-                    </select>
-                  </div>
 
                   {/* Discount section */}
                   <div className="pt-4 border-t" style={{ borderColor: colors.powderedLilac }}>
-                    {!appliedDiscount ? (
-                      <div>
-                        <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Discount Code</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={discountCode}
-                            onChange={(e) => setDiscountCode(e.target.value)}
-                            placeholder="Enter code"
-                            className="flex-1 bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
-                            style={{ borderColor: colors.mutedMauve }}
-                          />
-                          <button
-                            type="button"
-                            onClick={applyDiscount}
-                            className="text-xs font-sleek uppercase tracking-widest text-white px-4 py-2 rounded shadow-sm hover:opacity-90"
-                            style={{ backgroundColor: colors.dustyOrchid }}
-                          >
-                            Apply
-                          </button>
-                        </div>
-                        {discountError && <p className="text-red-500 text-xs mt-1">{discountError}</p>}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-sleek" style={{ color: colors.deepRosewood }}>
-                          Discount: {appliedDiscount.code} (-{appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : `$${appliedDiscount.value}`})
-                        </span>
+                    <label className="block font-sleek text-xs tracking-widest uppercase mb-2" style={{ color: colors.deepRosewood }}>Discount Code</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value)}
+                        placeholder="Enter code"
+                        className="flex-1 bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
+                        style={{ borderColor: colors.mutedMauve }}
+                      />
+                      {!appliedDiscount ? (
+                        <button
+                          type="button"
+                          onClick={applyDiscount}
+                          className="text-xs px-3 py-1 border rounded hover:bg-gray-50"
+                          style={{ borderColor: colors.dustyOrchid, color: colors.dustyOrchid }}
+                        >
+                          Apply
+                        </button>
+                      ) : (
                         <button
                           type="button"
                           onClick={removeDiscount}
-                          className="text-xs text-red-500 hover:text-red-700"
+                          className="text-xs px-3 py-1 text-red-500 hover:text-red-700"
                         >
                           Remove
                         </button>
-                      </div>
+                      )}
+                    </div>
+                    {discountError && <p className="text-xs text-red-500 mt-1">{discountError}</p>}
+                    {appliedDiscount && (
+                      <p className="text-xs text-green-600 mt-1">
+                        {appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}% off` : `$${appliedDiscount.value} off`} applied!
+                      </p>
                     )}
                   </div>
 
                   <div className="pt-4 border-t space-y-2 font-sleek text-sm" style={{ borderColor: colors.powderedLilac, color: colors.deepRosewood }}>
                     <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
                     <div className="flex justify-between"><span>Shipping</span><span>Free</span></div>
-                    {fee > 0 && <div className="flex justify-between text-red-400"><span>App Processing Fee</span><span>${fee.toFixed(2)}</span></div>}
-                    {appliedDiscount && (
+                    {discountAmount > 0 && (
                       <div className="flex justify-between text-green-600">
                         <span>Discount</span>
                         <span>-${discountAmount.toFixed(2)}</span>
@@ -849,13 +871,14 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                     )}
                     <div className="flex justify-between font-medium pt-2 text-lg"><span>Total</span><span>${grandTotal.toFixed(2)}</span></div>
                   </div>
+
                   <button
                     type="submit"
                     disabled={isSubmitting}
                     className="w-full mt-6 py-4 font-sleek text-xs tracking-widest uppercase text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                     style={{ backgroundColor: colors.deepRosewood }}
                   >
-                    {isSubmitting ? 'Processing...' : 'Submit Order Request'}
+                    {isSubmitting ? 'Processing...' : `Pay $${grandTotal.toFixed(2)} with Stripe`}
                   </button>
                 </form>
               )}
@@ -1077,6 +1100,29 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
     }
   };
 
+const [printing, setPrinting] = useState({});
+const printLabel = async (order) => {
+  setPrinting({ ...printing, [order.id]: true });
+  try {
+    const response = await fetch('/api/shipping/label', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order }),
+    });
+    const data = await response.json();
+    if (response.ok && data.label_url) {
+      window.open(data.label_url, '_blank');
+    } else {
+      showToast('Error generating label: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    showToast('Failed to generate label');
+    console.error(err);
+  } finally {
+    setPrinting({ ...printing, [order.id]: false });
+  }
+};
+
   const handleCreateDiscount = async () => {
     const { data, error } = await supabase
       .from('discounts')
@@ -1146,44 +1192,54 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
             <p className="font-sleek text-sm text-gray-500 mb-8">Review incoming orders and update their fulfillment status.</p>
             <div className="bg-white border rounded-lg shadow-sm overflow-hidden" style={{ borderColor: '#EAEAEA' }}>
               <table className="w-full text-left font-sleek text-sm">
-                <thead className="bg-gray-50 border-b text-xs uppercase tracking-widest text-gray-500" style={{ borderColor: '#EAEAEA' }}>
-                  <tr>
-                    <th className="px-6 py-4 font-medium">Order ID</th>
-                    <th className="px-6 py-4 font-medium">Customer</th>
-                    <th className="px-6 py-4 font-medium">Payment</th>
-                    <th className="px-6 py-4 font-medium">Total</th>
-                    <th className="px-6 py-4 font-medium">Delivery</th>
-                    <th className="px-6 py-4 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y" style={{ borderColor: '#EAEAEA' }}>
-                  {orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium" style={{ color: colors.deepRosewood }}>{order.order_number}</td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {order.customer_name}<br/>
-                        <span className="text-xs text-gray-400">{order.items?.map(i => i.name).join(', ')}</span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">{order.payment_method}</td>
-                      <td className="px-6 py-4 text-gray-600">{order.total}</td>
-                      <td className="px-6 py-4 text-gray-600">{order.delivery_method}</td>
-                      <td className="px-6 py-4">
-                        <select
-                          value={order.status}
-                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                          className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border cursor-pointer focus:outline-none ${getStatusColor(order.status)}`}
-                        >
-                          <option value="Pending Payment">Pending Payment</option>
-                          <option value="Paid - In Production">Paid - In Production</option>
-                          <option value="Ready for Pickup">Ready for Pickup</option>
-                          <option value="Shipped">Shipped</option>
-                          <option value="Completed">Completed</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+  <thead className="bg-gray-50 border-b text-xs uppercase tracking-widest text-gray-500" style={{ borderColor: '#EAEAEA' }}>
+    <tr>
+      <th className="px-6 py-4 font-medium">Order ID</th>
+      <th className="px-6 py-4 font-medium">Customer</th>
+      <th className="px-6 py-4 font-medium">Payment</th>
+      <th className="px-6 py-4 font-medium">Total</th>
+      <th className="px-6 py-4 font-medium">Delivery</th>
+      <th className="px-6 py-4 font-medium">Status</th>
+      <th className="px-6 py-4 font-medium">Label</th>   {/* New column header */}
+    </tr>
+  </thead>
+  <tbody className="divide-y" style={{ borderColor: '#EAEAEA' }}>
+    {orders.map((order) => (
+      <tr key={order.id} className="hover:bg-gray-50">
+        <td className="px-6 py-4 font-medium" style={{ color: colors.deepRosewood }}>{order.order_number}</td>
+        <td className="px-6 py-4 text-gray-600">
+          {order.customer_name}<br/>
+          <span className="text-xs text-gray-400">{order.items?.map(i => i.name).join(', ')}</span>
+        </td>
+        <td className="px-6 py-4 text-gray-600">{order.payment_method}</td>
+        <td className="px-6 py-4 text-gray-600">{order.total}</td>
+        <td className="px-6 py-4 text-gray-600">{order.delivery_method}</td>
+        <td className="px-6 py-4">
+          <select
+            value={order.status}
+            onChange={(e) => handleStatusChange(order.id, e.target.value)}
+            className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border cursor-pointer focus:outline-none ${getStatusColor(order.status)}`}
+          >
+            <option value="Pending Payment">Pending Payment</option>
+            <option value="Paid - In Production">Paid - In Production</option>
+            <option value="Ready for Pickup">Ready for Pickup</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </td>
+        <td className="px-6 py-4">
+          <button
+            onClick={() => printLabel(order)}
+            disabled={printing[order.id]}
+            className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
+          >
+            {printing[order.id] ? 'Generating...' : 'Print Label'}
+          </button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
             </div>
           </div>
         )}
@@ -1420,7 +1476,7 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
               Satin & Stem
             </span>
             <p className="font-sleek text-sm leading-relaxed max-w-sm mb-8" style={{ color: colors.mutedMauve }}>
-              Handcrafted ribbon and faux botanical leis originating in Tallahassee, Florida.
+              Handcrafted ribbon and faux botanical stoles originating in Tallahassee, Florida.
             </p>
             <div className="flex space-x-6">
               <a href="https://instagram.com/__satinandstem" target="_blank" rel="noreferrer" className="hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}><Instagram size={18} strokeWidth={1.5} /></a>
