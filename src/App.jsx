@@ -1727,7 +1727,6 @@ export default function App() {
   setCart([...cart, product]);
   showToast(`Added ${product.name} to Cart`);
 };
-  };
 
   const isPublicView = !currentView.startsWith('admin');
 
