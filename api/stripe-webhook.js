@@ -52,6 +52,12 @@ export default async function handler(req, res) {
     }
     console.log('📦 Order found:', order.id);
 
+    // ✅ Duplicate prevention: if already paid, skip processing
+    if (order.status === 'Paid - In Production') {
+      console.log('⏭️ Order already paid – skipping duplicate email.');
+      return res.status(200).json({ received: true });
+    }
+
     // Update order status
     const { error: updateError } = await supabase
       .from('orders')
@@ -63,7 +69,7 @@ export default async function handler(req, res) {
       console.log('✅ Order status updated');
     }
 
-    // Prepare email content
+    // Prepare email content using the stored items (which now include name and price)
     const cartHtml = order.items.map(item => `<li>${item.name} - ${item.price}</li>`).join('');
     const address = order.shipping_address || {};
 
