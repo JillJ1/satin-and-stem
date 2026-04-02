@@ -1100,28 +1100,65 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
     }
   };
 
-const [printing, setPrinting] = useState({});
-const printLabel = async (order) => {
-  setPrinting({ ...printing, [order.id]: true });
-  try {
-    const response = await fetch('/api/shipping/label', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order }),
-    });
-    const data = await response.json();
-    if (response.ok && data.label_url) {
-      window.open(data.label_url, '_blank');
+  // --- NEW: Convert Inquiry to Order ---
+  const convertInquiryToOrder = async (inquiry) => {
+    const confirmed = window.confirm(`Create an order from ${inquiry.name}'s inquiry?`);
+    if (!confirmed) return;
+
+    const orderNumber = `ORD-${Date.now()}`;
+    const items = [{ name: `Custom Inquiry: ${inquiry.details.substring(0, 50)}`, price: 'Custom', id: null }];
+    const total = 'Custom';
+
+    const { error } = await supabase
+      .from('orders')
+      .insert({
+        order_number: orderNumber,
+        customer_name: inquiry.name,
+        customer_email: inquiry.email,
+        items,
+        total,
+        payment_method: 'custom inquiry',
+        delivery_method: 'shipping',
+        status: 'Pending Payment',
+        shipping_address: null,
+      });
+
+    if (error) {
+      showToast('Error creating order');
     } else {
-      showToast('Error generating label: ' + (data.error || 'Unknown error'));
+      // Mark inquiry as converted
+      await supabase.from('inquiries').update({ status: 'Converted' }).eq('id', inquiry.id);
+      setInquiries(inquiries.map(i => i.id === inquiry.id ? { ...i, status: 'Converted' } : i));
+      showToast(`Order created for ${inquiry.name}.`);
+      setActiveTab('orders');
+      // Refresh orders
+      const { data } = await supabase.from('orders').select('*');
+      if (data) setOrders(data);
     }
-  } catch (err) {
-    showToast('Failed to generate label');
-    console.error(err);
-  } finally {
-    setPrinting({ ...printing, [order.id]: false });
-  }
-};
+  };
+
+  const [printing, setPrinting] = useState({});
+  const printLabel = async (order) => {
+    setPrinting({ ...printing, [order.id]: true });
+    try {
+      const response = await fetch('/api/shipping/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order }),
+      });
+      const data = await response.json();
+      if (response.ok && data.label_url) {
+        window.open(data.label_url, '_blank');
+      } else {
+        showToast('Error generating label: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      showToast('Failed to generate label');
+      console.error(err);
+    } finally {
+      setPrinting({ ...printing, [order.id]: false });
+    }
+  };
 
   const handleCreateDiscount = async () => {
     const { data, error } = await supabase
@@ -1192,54 +1229,54 @@ const printLabel = async (order) => {
             <p className="font-sleek text-sm text-gray-500 mb-8">Review incoming orders and update their fulfillment status.</p>
             <div className="bg-white border rounded-lg shadow-sm overflow-hidden" style={{ borderColor: '#EAEAEA' }}>
               <table className="w-full text-left font-sleek text-sm">
-  <thead className="bg-gray-50 border-b text-xs uppercase tracking-widest text-gray-500" style={{ borderColor: '#EAEAEA' }}>
-    <tr>
-      <th className="px-6 py-4 font-medium">Order ID</th>
-      <th className="px-6 py-4 font-medium">Customer</th>
-      <th className="px-6 py-4 font-medium">Payment</th>
-      <th className="px-6 py-4 font-medium">Total</th>
-      <th className="px-6 py-4 font-medium">Delivery</th>
-      <th className="px-6 py-4 font-medium">Status</th>
-      <th className="px-6 py-4 font-medium">Label</th>   {/* New column header */}
-    </tr>
-  </thead>
-  <tbody className="divide-y" style={{ borderColor: '#EAEAEA' }}>
-    {orders.map((order) => (
-      <tr key={order.id} className="hover:bg-gray-50">
-        <td className="px-6 py-4 font-medium" style={{ color: colors.deepRosewood }}>{order.order_number}</td>
-        <td className="px-6 py-4 text-gray-600">
-          {order.customer_name}<br/>
-          <span className="text-xs text-gray-400">{order.items?.map(i => i.name).join(', ')}</span>
-        </td>
-        <td className="px-6 py-4 text-gray-600">{order.payment_method}</td>
-        <td className="px-6 py-4 text-gray-600">{order.total}</td>
-        <td className="px-6 py-4 text-gray-600">{order.delivery_method}</td>
-        <td className="px-6 py-4">
-          <select
-            value={order.status}
-            onChange={(e) => handleStatusChange(order.id, e.target.value)}
-            className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border cursor-pointer focus:outline-none ${getStatusColor(order.status)}`}
-          >
-            <option value="Pending Payment">Pending Payment</option>
-            <option value="Paid - In Production">Paid - In Production</option>
-            <option value="Ready for Pickup">Ready for Pickup</option>
-            <option value="Shipped">Shipped</option>
-            <option value="Completed">Completed</option>
-          </select>
-        </td>
-        <td className="px-6 py-4">
-          <button
-            onClick={() => printLabel(order)}
-            disabled={printing[order.id]}
-            className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
-          >
-            {printing[order.id] ? 'Generating...' : 'Print Label'}
-          </button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
+                <thead className="bg-gray-50 border-b text-xs uppercase tracking-widest text-gray-500" style={{ borderColor: '#EAEAEA' }}>
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Order ID</th>
+                    <th className="px-6 py-4 font-medium">Customer</th>
+                    <th className="px-6 py-4 font-medium">Payment</th>
+                    <th className="px-6 py-4 font-medium">Total</th>
+                    <th className="px-6 py-4 font-medium">Delivery</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="px-6 py-4 font-medium">Label</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y" style={{ borderColor: '#EAEAEA' }}>
+                  {orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium" style={{ color: colors.deepRosewood }}>{order.order_number}</td>
+                      <td className="px-6 py-4 text-gray-600">
+                        {order.customer_name}<br/>
+                        <span className="text-xs text-gray-400">{order.items?.map(i => i.name).join(', ')}</span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{order.payment_method}</td>
+                      <td className="px-6 py-4 text-gray-600">{order.total}</td>
+                      <td className="px-6 py-4 text-gray-600">{order.delivery_method}</td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border cursor-pointer focus:outline-none ${getStatusColor(order.status)}`}
+                        >
+                          <option value="Pending Payment">Pending Payment</option>
+                          <option value="Paid - In Production">Paid - In Production</option>
+                          <option value="Ready for Pickup">Ready for Pickup</option>
+                          <option value="Shipped">Shipped</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => printLabel(order)}
+                          disabled={printing[order.id]}
+                          className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
+                        >
+                          {printing[order.id] ? 'Generating...' : 'Print Label'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -1261,13 +1298,14 @@ const printLabel = async (order) => {
                       <p className="font-sleek text-xs uppercase tracking-widest text-red-400 mt-1">Needed by: {inq.needed_by}</p>
                       <p className="font-sleek text-xs text-gray-400 mt-1">Email: {inq.email}</p>
                     </div>
+                    {/* Updated status badge with "Converted" */}
                     <span className="px-3 py-1 text-[10px] uppercase tracking-widest rounded-full border"
                           style={{
-                            backgroundColor: inq.status === 'Responded' ? '#e2e8f0' : '#dbeafe',
-                            borderColor: inq.status === 'Responded' ? '#cbd5e1' : '#bfdbfe',
-                            color: inq.status === 'Responded' ? '#4b5563' : '#1e40af'
+                            backgroundColor: inq.status === 'Converted' ? '#e2e8f0' : (inq.status === 'Responded' ? '#e2e8f0' : '#dbeafe'),
+                            borderColor: inq.status === 'Converted' ? '#cbd5e1' : (inq.status === 'Responded' ? '#cbd5e1' : '#bfdbfe'),
+                            color: inq.status === 'Converted' ? '#4b5563' : (inq.status === 'Responded' ? '#4b5563' : '#1e40af')
                           }}>
-                      {inq.status === 'Responded' ? 'Responded' : 'Unread'}
+                      {inq.status === 'Converted' ? 'Converted' : (inq.status === 'Responded' ? 'Responded' : 'Unread')}
                     </span>
                   </div>
                   <p className="font-sleek text-sm text-gray-600 leading-relaxed border-l-2 pl-4" style={{ borderColor: colors.powderedLilac }}>
@@ -1281,14 +1319,23 @@ const printLabel = async (order) => {
                     >
                       Reply
                     </button>
-                    {inq.status !== 'Responded' && (
-                      <button
-                        onClick={() => handleMarkAsRead(inq)}
-                        disabled={updatingInquiry === inq.id}
-                        className="text-xs font-sleek uppercase tracking-widest text-gray-500 hover:text-gray-800 disabled:opacity-50"
-                      >
-                        {updatingInquiry === inq.id ? 'Updating...' : 'Mark as Read (Email Sent?)'}
-                      </button>
+                    {inq.status !== 'Responded' && inq.status !== 'Converted' && (
+                      <>
+                        <button
+                          onClick={() => handleMarkAsRead(inq)}
+                          disabled={updatingInquiry === inq.id}
+                          className="text-xs font-sleek uppercase tracking-widest text-gray-500 hover:text-gray-800 disabled:opacity-50"
+                        >
+                          {updatingInquiry === inq.id ? 'Updating...' : 'Mark as Read (Email Sent?)'}
+                        </button>
+                        <button
+                          onClick={() => convertInquiryToOrder(inq)}
+                          className="text-xs font-sleek uppercase tracking-widest text-white px-3 py-1 rounded shadow-sm hover:opacity-90"
+                          style={{ backgroundColor: colors.mossGreen }}
+                        >
+                          Convert to Order
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
