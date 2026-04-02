@@ -723,10 +723,8 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
     }
   };
 
-  // (REMOVED: The old useEffect that listened for ?success and redirected to home.
-  // That logic is now handled in the main App component.)
+  // (The old useEffect that listened for ?success was removed; now handled in App.)
 
-  // JSX (same as your current CartPage, but with Stripe button and discount)
   return (
     <div className="py-20 bg-[#FCFBFB] min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -878,7 +876,7 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   );
 };
 
-// ---------- NEW: Thank You Page ----------
+// Thank You Page with updated text
 const ThankYouPage = ({ setCurrentView }) => {
   return (
     <div className="min-h-screen bg-[#FCFBFB] flex items-center justify-center px-4">
@@ -886,8 +884,9 @@ const ThankYouPage = ({ setCurrentView }) => {
         <div className="mb-6">
           <CheckCircle size={64} className="mx-auto mb-4" style={{ color: colors.mossGreen }} />
           <h1 className="font-elegant text-5xl mb-4" style={{ color: colors.deepRosewood }}>Thank You!</h1>
-          <p className="font-sleek text-lg text-gray-600 mb-6">
-            Your payment was successful. We've sent a confirmation email to you and will begin processing your order.
+          <p className="font-sleek text-gray-500 mb-8">
+            We've received your order and will send a confirmation email shortly.<br />
+            We'll notify you when your order ships.
           </p>
           <button
             onClick={() => setCurrentView('home')}
@@ -1557,7 +1556,32 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
           <div className="md:col-span-4">
             <h4 className="font-sleek text-xs tracking-widest uppercase mb-6" style={{ color: colors.deepRosewood }}>Stay Connected</h4>
             <p className="font-sleek text-sm mb-4" style={{ color: colors.mutedMauve }}>Join the list for elegant restocks and exclusive previews.</p>
-            <form className="flex border-b" style={{ borderColor: colors.deepRosewood }} onSubmit={(e) => { e.preventDefault(); showToast("Welcome to the list."); }}>
+            {/* Updated newsletter form with /api/subscribe */}
+            <form
+              className="flex border-b"
+              style={{ borderColor: colors.deepRosewood }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const emailInput = e.target.querySelector('input[type="email"]');
+                const email = emailInput.value;
+                if (!email) return;
+                try {
+                  const res = await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email }),
+                  });
+                  if (res.ok) {
+                    showToast('Thanks for subscribing!');
+                    emailInput.value = '';
+                  } else {
+                    showToast('Something went wrong. Please try again.');
+                  }
+                } catch (err) {
+                  showToast('Error. Please try again.');
+                }
+              }}
+            >
               <input type="email" placeholder="Email Address" className="flex-grow py-2 bg-transparent focus:outline-none font-sleek text-sm placeholder-opacity-50" style={{ color: colors.deepRosewood }} />
               <button type="submit" className="px-4 font-sleek text-xs tracking-widest uppercase hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}>Submit</button>
             </form>

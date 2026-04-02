@@ -19,14 +19,14 @@ export default async function handler(req, res) {
     const session = event.data.object;
     const orderNumber = session.metadata.orderNumber;
 
-    // Fetch order from Supabase
+    // Fetch the order from Supabase
     const { data: order, error } = await supabase
       .from('orders')
       .select('*')
       .eq('order_number', orderNumber)
       .single();
 
-    if (error) {
+    if (error || !order) {
       console.error('Order not found:', error);
       return res.status(500).json({ error: 'Order not found' });
     }
@@ -37,24 +37,54 @@ export default async function handler(req, res) {
       .update({ status: 'Paid - In Production', stripe_payment_status: 'paid' })
       .eq('order_number', orderNumber);
 
-    // Send email via Resend
+    // Prepare email content
     const cartHtml = order.items.map(item => `<li>${item.name} - ${item.price}</li>`).join('');
-    const address = order.shipping_address || {};
-    const html = `
-      <h2>New Order Received – Satin & Stem</h2>
+    const address = order.shipping_address;
+
+    // 1. Customer confirmation email
+    const customerHtml = `
+      <h2>Thank you for your order, ${order.customer_name}!</h2>
       <p><strong>Order #${orderNumber}</strong></p>
+      <p>Your order has been received and is now in production. We'll notify you when it ships.</p>
+      <h3>Order details:</h3>
+      <ul>${cartHtml}</ul>
+      <p><strong>Total:</strong> ${order.total}</p>
+      <p><strong>Shipping address:</strong><br/>
+      ${address?.street}<br/>
+      ${address?.street2 ? address.street2 + '<br/>' : ''}
+      ${address?.city}, ${address?.state} ${address?.zip}</p>
+      <p>Thank you for supporting Satin & Stem!</p>
+    `;
+
+    // 2. Admin notification email
+    const adminHtml = `
+      <h2>New Order #${orderNumber}</h2>
       <p><strong>Customer:</strong> ${order.customer_name} (${order.customer_email})</p>
       <p><strong>Items:</strong></p>
       <ul>${cartHtml}</ul>
       <p><strong>Total:</strong> ${order.total}</p>
-      <p><strong>Shipping Address:</strong><br/>
-      ${address.street || ''}<br/>
-      ${address.street2 ? address.street2 + '<br/>' : ''}
-      ${address.city || ''}, ${address.state || ''} ${address.zip || ''}
-      </p>
-      <p><strong>Payment Method:</strong> Stripe</p>
+      <p><strong>Shipping address:</strong><br/>
+      ${address?.street}<br/>
+      ${address?.street2 ? address.street2 + '<br/>' : ''}
+      ${address?.city}, ${address?.state} ${address?.zip}</p>
     `;
 
+    // Send customer email
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: 'Satin & Stem <onboarding@resend.dev>',
+        to: order.customer_email,
+        subject: `Your Satin & Stem order #${orderNumber}`,
+        html: customerHtml,
+      }),
+    });
+
+    // Send admin email
     await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -65,7 +95,7 @@ export default async function handler(req, res) {
         from: 'Satin & Stem <onboarding@resend.dev>',
         to: 'satinandstem@protonmail.com',
         subject: `New Order #${orderNumber}`,
-        html,
+        html: adminHtml,
       }),
     });
   }
