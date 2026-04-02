@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Menu, X, ChevronRight, ChevronLeft, Heart, Instagram, Mail, ChevronDown, Lock, LayoutDashboard, Package, MessageSquare, LogOut, CheckCircle, Trash2, Settings, Tag } from 'lucide-react';
 import { supabase } from './lib/supabase';
 
