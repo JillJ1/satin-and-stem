@@ -576,7 +576,8 @@ const CustomOrderPage = ({ setCurrentView, showToast }) => {
 const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   const [isCheckout, setIsCheckout] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     street: '',
     street2: '',
@@ -670,66 +671,64 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   };
 
   const handleCheckoutSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  // Build items array with full details for email and order history
-  console.log('Cart items:', cart);
-  const itemsForDb = cart.map(item => ({
-    id: item.id,
-    quantity: 1,
-    name: item.name,
-    price: item.price
-  }));
+    console.log('Cart items:', cart);
+    const itemsForDb = cart.map(item => ({
+      id: item.id,
+      quantity: 1,
+      name: item.name,
+      price: item.price
+    }));
 
-  const orderNumber = `ORD-${Date.now()}`;
-  const shippingAddress = {
-    street: formData.street,
-    street2: formData.street2 || null,
-    city: formData.city,
-    state: formData.state,
-    zip: formData.zip
+    const orderNumber = `ORD-${Date.now()}`;
+    const customerName = `${formData.firstName} ${formData.lastName}`.trim();
+    const shippingAddress = {
+      street: formData.street,
+      street2: formData.street2 || null,
+      city: formData.city,
+      state: formData.state,
+      zip: formData.zip
+    };
+
+    const { error } = await supabase.rpc('create_order_and_update_inventory', {
+      order_number: orderNumber,
+      customer_name: customerName,
+      customer_email: formData.email,
+      items: itemsForDb,
+      total: `$${grandTotal.toFixed(2)}`,
+      payment_method: 'stripe',
+      delivery_method: 'shipping',
+      shipping_address: shippingAddress,
+    });
+
+    if (error) {
+      setIsSubmitting(false);
+      showToast('Error placing order. Please try again.');
+      console.error(error);
+      return;
+    }
+
+    const response = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderNumber,
+        total: grandTotal,
+        customerName,
+        customerEmail: formData.email,
+      }),
+    });
+    const data = await response.json();
+
+    if (response.ok && data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast('Error creating payment session');
+      setIsSubmitting(false);
+    }
   };
-
-  // Create order and deduct inventory (database function uses id/quantity for stock)
-  const { error } = await supabase.rpc('create_order_and_update_inventory', {
-    order_number: orderNumber,
-    customer_name: formData.fullName,
-    customer_email: formData.email,
-    items: itemsForDb,
-    total: `$${grandTotal.toFixed(2)}`,
-    payment_method: 'stripe',
-    delivery_method: 'shipping',
-    shipping_address: shippingAddress,
-  });
-
-  if (error) {
-    setIsSubmitting(false);
-    showToast('Error placing order. Please try again.');
-    console.error(error);
-    return;
-  }
-
-  // Create Stripe Checkout session
-  const response = await fetch('/api/create-checkout-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      orderNumber,
-      total: grandTotal,
-      customerName: formData.fullName,
-      customerEmail: formData.email,
-    }),
-  });
-  const data = await response.json();
-
-  if (response.ok && data.url) {
-    window.location.href = data.url;
-  } else {
-    showToast('Error creating payment session');
-    setIsSubmitting(false);
-  }
-};
 
   // (The old useEffect that listened for ?success was removed; now handled in App.)
 
@@ -787,11 +786,40 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                 </>
               ) : (
                 <form onSubmit={handleCheckoutSubmit} className="space-y-6">
-                  <div>
-                    <input type="text" name="fullName" value={formData.fullName} onChange={handleFormChange} placeholder="Full Name" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleFormChange}
+                      placeholder="First Name"
+                      required
+                      className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
+                      style={{ borderColor: colors.mutedMauve }}
+                    />
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleFormChange}
+                      placeholder="Last Name"
+                      required
+                      className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
+                      style={{ borderColor: colors.mutedMauve }}
+                    />
                   </div>
+
                   <div>
-                    <input type="email" name="email" value={formData.email} onChange={handleFormChange} placeholder="Email Address" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleFormChange}
+                      placeholder="Email Address"
+                      required
+                      className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
+                      style={{ borderColor: colors.mutedMauve }}
+                    />
                   </div>
 
                   <div className="pt-4 border-t" style={{ borderColor: colors.powderedLilac }}>
@@ -807,12 +835,47 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
                       className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm"
                       style={{ borderColor: colors.mutedMauve }}
                     />
-                    <input type="text" name="street2" value={formData.street2} onChange={handleFormChange} placeholder="Apt, Suite, etc. (optional)" className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                    <input
+                      type="text"
+                      name="street2"
+                      value={formData.street2}
+                      onChange={handleFormChange}
+                      placeholder="Apt, Suite, etc. (optional)"
+                      className="w-full bg-transparent border-b py-2 mb-3 focus:outline-none font-sleek text-sm"
+                      style={{ borderColor: colors.mutedMauve }}
+                    />
                     <div className="grid grid-cols-2 gap-3">
-                      <input type="text" name="city" value={formData.city} onChange={handleFormChange} placeholder="City" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
-                      <input type="text" name="state" value={formData.state} onChange={handleFormChange} placeholder="State" required className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleFormChange}
+                        placeholder="City"
+                        required
+                        className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
+                        style={{ borderColor: colors.mutedMauve }}
+                      />
+                      <input
+                        type="text"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleFormChange}
+                        placeholder="State"
+                        required
+                        className="w-full bg-transparent border-b py-2 focus:outline-none font-sleek text-sm"
+                        style={{ borderColor: colors.mutedMauve }}
+                      />
                     </div>
-                    <input type="text" name="zip" value={formData.zip} onChange={handleFormChange} placeholder="ZIP Code" required className="w-full bg-transparent border-b py-2 mt-3 focus:outline-none font-sleek text-sm" style={{ borderColor: colors.mutedMauve }} />
+                    <input
+                      type="text"
+                      name="zip"
+                      value={formData.zip}
+                      onChange={handleFormChange}
+                      placeholder="ZIP Code"
+                      required
+                      className="w-full bg-transparent border-b py-2 mt-3 focus:outline-none font-sleek text-sm"
+                      style={{ borderColor: colors.mutedMauve }}
+                    />
                   </div>
 
                   {/* Discount section */}
@@ -1157,27 +1220,27 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
 
   const [printing, setPrinting] = useState({});
   const printLabel = async (order) => {
-  setPrinting({ ...printing, [order.id]: true });
-  try {
-    const response = await fetch('/api/shipping/label', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order }),
-    });
-    const data = await response.json();
-    console.log('Label response:', data);   // add this
-    if (response.ok && data.label_url) {
-      window.open(data.label_url, '_blank');
-    } else {
-      showToast('Error generating label: ' + (data.error || 'Unknown error'));
+    setPrinting({ ...printing, [order.id]: true });
+    try {
+      const response = await fetch('/api/shipping/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order }),
+      });
+      const data = await response.json();
+      console.log('Label response:', data);
+      if (response.ok && data.label_url) {
+        window.open(data.label_url, '_blank');
+      } else {
+        showToast('Error generating label: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      showToast('Failed to generate label');
+      console.error(err);
+    } finally {
+      setPrinting({ ...printing, [order.id]: false });
     }
-  } catch (err) {
-    showToast('Failed to generate label');
-    console.error(err);
-  } finally {
-    setPrinting({ ...printing, [order.id]: false });
-  }
-};
+  };
 
   const handleCreateDiscount = async () => {
     const { data, error } = await supabase
@@ -1718,15 +1781,15 @@ export default function App() {
   };
 
   const addToCart = (product) => {
-  // Count how many of this product are already in the cart
-  const currentCount = cart.filter(item => item.id === product.id).length;
-  if (currentCount + 1 > product.inventory) {
-    showToast(`Only ${product.inventory} available. Cannot add more.`);
-    return;
-  }
-  setCart([...cart, product]);
-  showToast(`Added ${product.name} to Cart`);
-};
+    // Count how many of this product are already in the cart
+    const currentCount = cart.filter(item => item.id === product.id).length;
+    if (currentCount + 1 > product.inventory) {
+      showToast(`Only ${product.inventory} available. Cannot add more.`);
+      return;
+    }
+    setCart([...cart, product]);
+    showToast(`Added ${product.name} to Cart`);
+  };
 
   const isPublicView = !currentView.startsWith('admin');
 
