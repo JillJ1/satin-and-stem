@@ -670,58 +670,65 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
   };
 
   const handleCheckoutSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    // Create the order in Supabase (pending payment)
-    const itemsForDb = cart.map(item => ({ id: item.id, quantity: 1 }));
-    const orderNumber = `ORD-${Date.now()}`;
-    const shippingAddress = {
-      street: formData.street,
-      street2: formData.street2 || null,
-      city: formData.city,
-      state: formData.state,
-      zip: formData.zip
-    };
+  // Build items array with full details for email and order history
+  const itemsForDb = cart.map(item => ({
+    id: item.id,
+    quantity: 1,
+    name: item.name,
+    price: item.price
+  }));
 
-    const { error } = await supabase.rpc('create_order_and_update_inventory', {
-      order_number: orderNumber,
-      customer_name: formData.fullName,
-      customer_email: formData.email,
-      items: itemsForDb,
-      total: `$${grandTotal.toFixed(2)}`,
-      payment_method: 'stripe',
-      delivery_method: 'shipping',
-      shipping_address: shippingAddress,
-    });
-
-    if (error) {
-      setIsSubmitting(false);
-      showToast('Error placing order. Please try again.');
-      console.error(error);
-      return;
-    }
-
-    // Create Stripe Checkout session
-    const response = await fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderNumber,
-        total: grandTotal,
-        customerName: formData.fullName,
-        customerEmail: formData.email,
-      }),
-    });
-    const data = await response.json();
-
-    if (response.ok && data.url) {
-      window.location.href = data.url;
-    } else {
-      showToast('Error creating payment session');
-      setIsSubmitting(false);
-    }
+  const orderNumber = `ORD-${Date.now()}`;
+  const shippingAddress = {
+    street: formData.street,
+    street2: formData.street2 || null,
+    city: formData.city,
+    state: formData.state,
+    zip: formData.zip
   };
+
+  // Create order and deduct inventory (database function uses id/quantity for stock)
+  const { error } = await supabase.rpc('create_order_and_update_inventory', {
+    order_number: orderNumber,
+    customer_name: formData.fullName,
+    customer_email: formData.email,
+    items: itemsForDb,
+    total: `$${grandTotal.toFixed(2)}`,
+    payment_method: 'stripe',
+    delivery_method: 'shipping',
+    shipping_address: shippingAddress,
+  });
+
+  if (error) {
+    setIsSubmitting(false);
+    showToast('Error placing order. Please try again.');
+    console.error(error);
+    return;
+  }
+
+  // Create Stripe Checkout session
+  const response = await fetch('/api/create-checkout-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      orderNumber,
+      total: grandTotal,
+      customerName: formData.fullName,
+      customerEmail: formData.email,
+    }),
+  });
+  const data = await response.json();
+
+  if (response.ok && data.url) {
+    window.location.href = data.url;
+  } else {
+    showToast('Error creating payment session');
+    setIsSubmitting(false);
+  }
+};
 
   // (The old useEffect that listened for ?success was removed; now handled in App.)
 
