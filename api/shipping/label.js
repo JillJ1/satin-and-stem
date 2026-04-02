@@ -20,6 +20,7 @@ export default async function handler(req, res) {
       zip: '32304',
       country: 'US',
       phone: '850-305-1504',
+      email: 'hello@satinandstem.shop',   // <-- add this line
     },
     address_to: {
       name: order.customer_name,
