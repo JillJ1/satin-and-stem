@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const shipment = {
     address_from: {
       name: 'Satin & Stem',
-      street1: '2636 Mission Rd',   // ← REPLACE with your actual address
+      street1: '2636 Mission Rd',
       city: 'Tallahassee',
       state: 'FL',
       zip: '32304',
@@ -81,15 +81,34 @@ export default async function handler(req, res) {
     });
 
     const labelData = await transactionRes.json();
-    console.log('📄 Transaction response status:', transactionRes.status);
+    console.log('📄 Full transaction response:', JSON.stringify(labelData, null, 2));
 
     if (!transactionRes.ok) {
       console.error('❌ Transaction error:', labelData);
       return res.status(500).json({ error: labelData.detail || 'Label purchase failed' });
     }
 
-    console.log('✅ Label URL:', labelData.label_url);
-    res.status(200).json({ label_url: labelData.label_url });
+    // Try multiple possible locations for the label URL
+    let labelUrl = null;
+    if (labelData.label_url) {
+      labelUrl = labelData.label_url;
+    } else if (labelData.object_results && labelData.object_results.label_url) {
+      labelUrl = labelData.object_results.label_url;
+    } else if (labelData.rates && labelData.rates[0] && labelData.rates[0].label_url) {
+      labelUrl = labelData.rates[0].label_url;
+    } else if (labelData.transaction && labelData.transaction.label_url) {
+      labelUrl = labelData.transaction.label_url;
+    } else if (labelData.url) {
+      labelUrl = labelData.url;
+    }
+
+    if (!labelUrl) {
+      console.error('❌ No label URL found in response. Full response:', JSON.stringify(labelData, null, 2));
+      return res.status(500).json({ error: 'Label not ready. Response: ' + JSON.stringify(labelData) });
+    }
+
+    console.log('✅ Label URL:', labelUrl);
+    res.status(200).json({ label_url: labelUrl });
   } catch (error) {
     console.error('💥 Unexpected error:', error);
     res.status(500).json({ error: error.message });
