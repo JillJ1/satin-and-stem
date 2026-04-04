@@ -1623,7 +1623,7 @@ const Footer = ({ showToast, setCurrentView }) => {
             <ul className="space-y-4 font-sleek text-sm" style={{ color: colors.mutedMauve }}>
               <li><button onClick={() => setCurrentView('classic')} className="hover:text-[#D56989] transition-colors">Collections</button></li>
               <li><button onClick={() => setCurrentView('custom')} className="hover:text-[#D56989] transition-colors">Custom Inquiry</button></li>
-              <li><a href="/affiliate" className="hover:text-[#D56989] transition-colors">The Stem Collective</a></li>
+              <li><a href="/affiliate.html" className="hover:text-[#D56989] transition-colors">The Stem Collective</a></li>
             </ul>
           </div>
           <div className="md:col-span-4">
@@ -1662,8 +1662,8 @@ const Footer = ({ showToast, setCurrentView }) => {
         <div className="pt-8 flex flex-col md:flex-row justify-between items-center font-sleek text-xs tracking-wider uppercase" style={{ color: colors.mutedMauve }}>
           <p>&copy; {new Date().getFullYear()} Satin & Stem. All rights reserved.</p>
           <div className="flex items-center space-x-6 mt-4 md:mt-0">
-            <a href="/privacy" className="hover:text-[#D56989] transition-colors">Privacy</a>
-            <a href="/terms" className="hover:text-[#D56989] transition-colors">Terms</a>
+            <a href="/privacy.html" className="hover:text-[#D56989] transition-colors">Privacy</a>
+            <a href="/terms.html" className="hover:text-[#D56989] transition-colors">Terms</a>
             <button onClick={() => setCurrentView('admin-login')} className="ml-4 opacity-20 hover:opacity-100 transition-opacity" title="Admin Portal"><Lock size={12} /></button>
           </div>
         </div>
