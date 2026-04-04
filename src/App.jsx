@@ -1671,3 +1671,179 @@ const Footer = ({ showToast, setCurrentView }) => {
     </footer>
   );
 };
+// --- Coming Soon Page Component ---
+const ComingSoonPage = ({ setCurrentView }) => {
+  return (
+    <div className="min-h-screen bg-[#FCFBFB] flex items-center justify-center px-4 relative">
+      <button
+        onClick={() => setCurrentView('admin-login')}
+        className="absolute top-6 right-6 opacity-20 hover:opacity-100 transition-opacity"
+        title="Admin Login"
+      >
+        <Lock size={20} strokeWidth={1} />
+      </button>
+      <div className="text-center max-w-2xl">
+        <div className="mb-8">
+          <h1 className="font-elegant text-6xl md:text-7xl tracking-wide" style={{ color: colors.dustyOrchid }}>
+            Satin & Stem
+          </h1>
+        </div>
+        <h2 className="font-elegant text-4xl md:text-6xl mb-6" style={{ color: colors.deepRosewood }}>
+          Coming Soon
+        </h2>
+        <p className="font-sleek text-lg text-gray-600 mb-8">
+          We're preparing something beautiful for you.<br />
+          Be the first to know when we launch.
+        </p>
+        <a
+          href="https://instagram.com/satinandstemshop"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block border-b border-[#D56989] pb-1 hover:opacity-70 transition-opacity"
+        >
+          <span className="font-sleek text-sm tracking-widest uppercase" style={{ color: colors.dustyOrchid }}>
+            Follow us on Instagram
+          </span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// ---------- Main App Component ----------
+export default function App() {
+  const [toastMessage, setToastMessage] = useState('');
+  const [currentView, setCurrentView] = useState('home');
+  const [cart, setCart] = useState([]);
+  const [activeModal, setActiveModal] = useState(null);
+  const [products, setProducts] = useState({ classic: [], collegiate: [], greek: [] });
+  const [comingSoon, setComingSoon] = useState(false);
+
+  // Fetch products from Supabase on mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from('products').select('*');
+      if (!error && data) {
+        const grouped = {
+          classic: data.filter(p => p.category === 'classic'),
+          collegiate: data.filter(p => p.category === 'collegiate'),
+          greek: data.filter(p => p.category === 'greek'),
+        };
+        setProducts(grouped);
+      } else {
+        setProducts(initialProducts);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  // Fetch coming soon setting
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'coming_soon')
+        .single();
+      if (!error && data) {
+        setComingSoon(data.value);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Handle Stripe success redirect and clear cart
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      setCart([]);
+      showToast('Payment successful! Your order is confirmed.');
+      setCurrentView('thank-you');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    if (urlParams.get('canceled') === 'true') {
+      showToast('Payment canceled. You can try again.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentView]);
+
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const addToCart = (product) => {
+    const currentCount = cart.filter(item => item.id === product.id).length;
+    if (currentCount + 1 > product.inventory) {
+      showToast(`Only ${product.inventory} available. Cannot add more.`);
+      return;
+    }
+    setCart([...cart, product]);
+    showToast(`Added ${product.name} to Cart`);
+  };
+
+  const isPublicView = !currentView.startsWith('admin');
+
+  if (comingSoon && !currentView.startsWith('admin')) {
+    return <ComingSoonPage setCurrentView={setCurrentView} />;
+  }
+
+  return (
+    <>
+      <style>{customStyles}</style>
+      <div className="min-h-screen bg-[#FCFBFB] font-sans text-gray-900 relative">
+        {isPublicView && <Navbar showToast={showToast} currentView={currentView} setCurrentView={setCurrentView} cart={cart} />}
+        
+        {currentView === 'home' && (
+          <>
+            <HeroSection setCurrentView={setCurrentView} />
+            <CollectionsSection setCurrentView={setCurrentView} />
+          </>
+        )}
+
+        {currentView === 'classic' && (
+          <CollectionPage categoryKey="classic" title="The Classic Collection" description="Our foundational line featuring soft romantic hues and timeless ivory ribbons." setCurrentView={setCurrentView} showToast={showToast} addToCart={addToCart} cart={cart} products={products} />
+        )}
+
+        {currentView === 'collegiate' && (
+          <CollectionPage categoryKey="collegiate" title="Collegiate Heritage" description="Elegant interpretations of university pride, meticulously crafted for Florida's finest." setCurrentView={setCurrentView} showToast={showToast} addToCart={addToCart} cart={cart} products={products} />
+        )}
+
+        {currentView === 'greek' && (
+          <CollectionPage categoryKey="greek" title="Greek Excellence" description="Sophisticated designs honoring the legacy and colors of D9 and Panhellenic organizations." setCurrentView={setCurrentView} showToast={showToast} addToCart={addToCart} cart={cart} products={products} />
+        )}
+
+        {currentView === 'custom' && <CustomOrderPage setCurrentView={setCurrentView} showToast={showToast} />}
+        {currentView === 'cart' && <CartPage cart={cart} setCart={setCart} setCurrentView={setCurrentView} showToast={showToast} />}
+        {currentView === 'thank-you' && <ThankYouPage setCurrentView={setCurrentView} />}
+
+        {currentView === 'admin-login' && <AdminLogin setCurrentView={setCurrentView} showToast={showToast} />}
+        {currentView === 'admin-dashboard' && <AdminDashboard setCurrentView={setCurrentView} showToast={showToast} products={products} setProducts={setProducts} comingSoon={comingSoon} setComingSoon={setComingSoon} />}
+
+        {isPublicView && <Footer showToast={showToast} setCurrentView={setCurrentView} />}
+
+        {activeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+            <div className="bg-white p-8 max-w-md w-full border shadow-2xl relative" style={{ borderColor: colors.lavenderBlush }}>
+              <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 hover:opacity-50 transition-opacity" style={{ color: colors.deepRosewood }}><X size={20} strokeWidth={1} /></button>
+              <h3 className="font-elegant text-3xl mb-4" style={{ color: colors.deepRosewood }}>{activeModal === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions'}</h3>
+              <p className="font-sleek text-sm leading-relaxed" style={{ color: colors.mutedMauve }}>We respect your privacy. Contact information is used solely for order fulfillment.</p>
+            </div>
+          </div>
+        )}
+
+        {toastMessage && (
+          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300">
+            <div className="px-8 py-4 shadow-lg font-sleek text-sm tracking-widest uppercase flex items-center space-x-3 border" style={{ backgroundColor: '#FCFBFB', color: colors.deepRosewood, borderColor: colors.lavenderBlush }}>
+              <span>{toastMessage}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
