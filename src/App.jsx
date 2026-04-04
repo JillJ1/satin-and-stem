@@ -226,13 +226,13 @@ const CollectionsSection = ({ setCurrentView }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="group cursor-pointer" onClick={() => setCurrentView('classic')}>
             <div className="aspect-square bg-white border border-[#F4DFE6] p-4 flex flex-col justify-between mb-6 relative overflow-hidden">
-               <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundColor: colors.powderedLilac }}></div>
-               <div className="relative z-10 flex justify-end">
-                 <span className="font-elegant text-3xl italic opacity-50" style={{ color: colors.dustyOrchid }}>01</span>
-               </div>
-               <div className="relative z-10">
-                 <h3 className="font-elegant text-2xl mb-2" style={{ color: colors.deepRosewood }}>The Classic</h3>
-               </div>
+              <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: "url('/images/classic-collection.jpg')" }}></div>
+              <div className="relative z-10 flex justify-end">
+                <span className="font-elegant text-3xl italic opacity-50" style={{ color: colors.dustyOrchid }}>01</span>
+              </div>
+              <div className="relative z-10">
+                <h3 className="font-elegant text-2xl mb-2" style={{ color: colors.deepRosewood }}>The Classic</h3>
+              </div>
             </div>
             <p className="font-sleek text-sm leading-relaxed mb-4" style={{ color: colors.mutedMauve }}>Soft romantic hues and elegant neutral ribbons.</p>
             <span className="font-sleek text-xs tracking-widest uppercase pb-1 border-b" style={{ color: colors.dustyOrchid, borderColor: colors.dustyOrchid }}>Explore</span>
@@ -240,13 +240,13 @@ const CollectionsSection = ({ setCurrentView }) => {
 
           <div className="group cursor-pointer" onClick={() => setCurrentView('collegiate')}>
             <div className="aspect-square bg-white border border-[#F4DFE6] p-4 flex flex-col justify-between mb-6 relative overflow-hidden">
-               <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundColor: colors.sorbetStem, opacity: 0.3 }}></div>
-               <div className="relative z-10 flex justify-end">
-                 <span className="font-elegant text-3xl italic opacity-50" style={{ color: colors.mossGreen }}>02</span>
-               </div>
-               <div className="relative z-10">
-                 <h3 className="font-elegant text-2xl mb-2" style={{ color: colors.deepRosewood }}>Collegiate Heritage</h3>
-               </div>
+              <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: "url('/images/collegiate-collection.jpg')" }}></div>
+              <div className="relative z-10 flex justify-end">
+                <span className="font-elegant text-3xl italic opacity-50" style={{ color: colors.mossGreen }}>02</span>
+              </div>
+              <div className="relative z-10">
+                <h3 className="font-elegant text-2xl mb-2" style={{ color: colors.deepRosewood }}>Collegiate Heritage</h3>
+              </div>
             </div>
             <p className="font-sleek text-sm leading-relaxed mb-4" style={{ color: colors.mutedMauve }}>Watercolor interpretations of university colors, featuring FAMU & FSU.</p>
             <span className="font-sleek text-xs tracking-widest uppercase pb-1 border-b" style={{ color: colors.mossGreen, borderColor: colors.mossGreen }}>Explore</span>
@@ -254,13 +254,13 @@ const CollectionsSection = ({ setCurrentView }) => {
 
           <div className="group cursor-pointer" onClick={() => setCurrentView('greek')}>
             <div className="aspect-square bg-white border border-[#F4DFE6] p-4 flex flex-col justify-between mb-6 relative overflow-hidden">
-               <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundColor: colors.petalGlaze, opacity: 0.2 }}></div>
-               <div className="relative z-10 flex justify-end">
-                 <span className="font-elegant text-3xl italic opacity-50" style={{ color: colors.dustyOrchid }}>03</span>
-               </div>
-               <div className="relative z-10">
-                 <h3 className="font-elegant text-2xl mb-2" style={{ color: colors.deepRosewood }}>Greek Excellence</h3>
-               </div>
+              <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: "url('/images/greek-collection.jpg')" }}></div>
+              <div className="relative z-10 flex justify-end">
+                <span className="font-elegant text-3xl italic opacity-50" style={{ color: colors.dustyOrchid }}>03</span>
+              </div>
+              <div className="relative z-10">
+                <h3 className="font-elegant text-2xl mb-2" style={{ color: colors.deepRosewood }}>Greek Excellence</h3>
+              </div>
             </div>
             <p className="font-sleek text-sm leading-relaxed mb-4" style={{ color: colors.mutedMauve }}>Exquisite designs honoring D9 and Panhellenic organizations.</p>
             <span className="font-sleek text-xs tracking-widest uppercase pb-1 border-b" style={{ color: colors.petalGlaze, borderColor: colors.petalGlaze }}>Explore</span>
@@ -309,29 +309,35 @@ const CollectionPage = ({ categoryKey, title, description, setCurrentView, showT
                   </div>
                 </div>
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-elegant text-xl mb-1" style={{ color: colors.deepRosewood }}>{item.name}</h3>
-                    <div className="flex items-center gap-3">
-                      <p className="font-sleek text-sm" style={{ color: colors.mutedMauve }}>{item.price}</p>
-                      {available > 0 ? (
-                        <span className="font-sleek text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: colors.mossGreen, borderColor: colors.sorbetStem, backgroundColor: '#F9FBF4' }}>
-                          {available === 1 ? '1 Available' : `${available} Available`}
-                        </span>
-                      ) : (
-                        <span className="font-sleek text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: colors.dustyOrchid, borderColor: colors.lavenderBlush, backgroundColor: colors.powderedLilac }}>
-                          Sold Out
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => available > 0 && addToCart(item)} 
-                    disabled={available <= 0}
-                    className={`p-2 transition-colors rounded-none ${available > 0 ? 'hover:bg-[#F4DFE6] cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
-                  >
-                    <ShoppingBag size={18} strokeWidth={1} style={{ color: colors.deepRosewood }} />
-                  </button>
-                </div>
+  <div>
+    <h3 className="font-elegant text-xl mb-1" style={{ color: colors.deepRosewood }}>{item.name}</h3>
+    <div className="flex items-center gap-3">
+      <p className="font-sleek text-sm" style={{ color: colors.mutedMauve }}>{item.price}</p>
+      {item.status === 'coming_soon' ? (
+        <span className="font-sleek text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: colors.dustyOrchid, borderColor: colors.lavenderBlush, backgroundColor: colors.powderedLilac }}>
+          Coming Soon
+        </span>
+      ) : (
+        item.inventory > 0 ? (
+          <span className="font-sleek text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: colors.mossGreen, borderColor: colors.sorbetStem, backgroundColor: '#F9FBF4' }}>
+            {item.inventory === 1 ? '1 Available' : `${item.inventory} Available`}
+          </span>
+        ) : (
+          <span className="font-sleek text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color: colors.dustyOrchid, borderColor: colors.lavenderBlush, backgroundColor: colors.powderedLilac }}>
+            Sold Out
+          </span>
+        )
+      )}
+    </div>
+  </div>
+  <button 
+    onClick={() => (item.status !== 'coming_soon' && item.inventory > 0) && addToCart(item)} 
+    disabled={item.status === 'coming_soon' || item.inventory <= 0}
+    className={`p-2 transition-colors rounded-none ${(item.status !== 'coming_soon' && item.inventory > 0) ? 'hover:bg-[#F4DFE6] cursor-pointer' : 'opacity-30 cursor-not-allowed'}`}
+  >
+    <ShoppingBag size={18} strokeWidth={1} style={{ color: colors.deepRosewood }} />
+  </button>
+</div>
               </div>
             );
           })}
@@ -394,7 +400,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
           className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
           style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
         />
-       </td>
+      </td>
       <td className="px-6 py-4">
         <input
           type="text"
@@ -403,7 +409,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
           className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
           style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
         />
-       </td>
+      </td>
       <td className="px-6 py-4">
         <input
           type="number"
@@ -412,7 +418,19 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
           className="w-16 bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1"
           style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
         />
-       </td>
+      </td>
+      <td className="px-6 py-4">
+        <select
+          value={editItem.status || 'active'}
+          onChange={e => setEditItem({...editItem, status: e.target.value})}
+          className="w-full bg-transparent border-b focus:outline-none focus:border-[#D56989] py-1 text-sm"
+          style={{ borderColor: hasChanges ? colors.dustyOrchid : 'transparent' }}
+        >
+          <option value="active">Active</option>
+          <option value="coming_soon">Coming Soon</option>
+          <option value="sold_out">Sold Out</option>
+        </select>
+      </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
           {editItem.image_url && (
@@ -450,7 +468,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
             </label>
           </div>
         </div>
-       </td>
+      </td>
       <td className="px-6 py-4 text-right space-x-2">
         {hasChanges ? (
           <button
@@ -470,7 +488,7 @@ const InventoryRow = ({ item, category, onSave, onDelete }) => {
         >
           <Trash2 size={14} />
         </button>
-       </td>
+      </td>
     </tr>
   );
 };
@@ -1098,16 +1116,18 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
   };
 
   const handleProductUpdate = async (category, updatedItem) => {
-    const { error } = await supabase
-      .from('products')
-      .update({
-        name: updatedItem.name,
-        price: updatedItem.price,
-        inventory: updatedItem.inventory,
-        img_color: updatedItem.img_color || updatedItem.imgColor,
-        image_url: updatedItem.image_url || null,
-      })
-      .eq('id', updatedItem.id);
+  const { error } = await supabase
+    .from('products')
+    .update({
+      name: updatedItem.name,
+      price: updatedItem.price,
+      inventory: updatedItem.inventory,
+      img_color: updatedItem.img_color || updatedItem.imgColor,
+      image_url: updatedItem.image_url || null,
+      status: updatedItem.status, // <-- add this line
+    })
+    .eq('id', updatedItem.id);
+  // ... rest unchanged
     if (error) {
       showToast('Error updating product');
     } else {
