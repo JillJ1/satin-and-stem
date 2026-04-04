@@ -1601,7 +1601,7 @@ const AdminDashboard = ({ setCurrentView, showToast, products, setProducts, comi
   );
 };
 
-const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
+const Footer = ({ showToast, setCurrentView }) => {
   return (
     <footer className="bg-white pt-24 pb-12 border-t" style={{ borderColor: colors.lavenderBlush }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1614,7 +1614,7 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
               Handcrafted ribbon and faux botanical stoles originating in Tallahassee, Florida.
             </p>
             <div className="flex space-x-6">
-              <a href="https://instagram.com/__satinandstem" target="_blank" rel="noreferrer" className="hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}><Instagram size={18} strokeWidth={1.5} /></a>
+              <a href="https://instagram.com/satinandstemshop" target="_blank" rel="noreferrer" className="hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}><Instagram size={18} strokeWidth={1.5} /></a>
               <a href="mailto:satinandstem@protonmail.com" className="hover:text-[#D56989] transition-colors" style={{ color: colors.deepRosewood }}><Mail size={18} strokeWidth={1.5} /></a>
             </div>
           </div>
@@ -1623,12 +1623,12 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
             <ul className="space-y-4 font-sleek text-sm" style={{ color: colors.mutedMauve }}>
               <li><button onClick={() => setCurrentView('classic')} className="hover:text-[#D56989] transition-colors">Collections</button></li>
               <li><button onClick={() => setCurrentView('custom')} className="hover:text-[#D56989] transition-colors">Custom Inquiry</button></li>
+              <li><a href="/affiliate" className="hover:text-[#D56989] transition-colors">The Stem Collective</a></li>
             </ul>
           </div>
           <div className="md:col-span-4">
             <h4 className="font-sleek text-xs tracking-widest uppercase mb-6" style={{ color: colors.deepRosewood }}>Stay Connected</h4>
             <p className="font-sleek text-sm mb-4" style={{ color: colors.mutedMauve }}>Join the list for elegant restocks and exclusive previews.</p>
-            {/* Updated newsletter form with /api/subscribe */}
             <form
               className="flex border-b"
               style={{ borderColor: colors.deepRosewood }}
@@ -1662,8 +1662,8 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
         <div className="pt-8 flex flex-col md:flex-row justify-between items-center font-sleek text-xs tracking-wider uppercase" style={{ color: colors.mutedMauve }}>
           <p>&copy; {new Date().getFullYear()} Satin & Stem. All rights reserved.</p>
           <div className="flex items-center space-x-6 mt-4 md:mt-0">
-            <button onClick={() => setActiveModal('privacy')} className="hover:text-[#D56989]">Privacy</button>
-            <button onClick={() => setActiveModal('terms')} className="hover:text-[#D56989]">Terms</button>
+            <a href="/privacy" className="hover:text-[#D56989] transition-colors">Privacy</a>
+            <a href="/terms" className="hover:text-[#D56989] transition-colors">Terms</a>
             <button onClick={() => setCurrentView('admin-login')} className="ml-4 opacity-20 hover:opacity-100 transition-opacity" title="Admin Portal"><Lock size={12} /></button>
           </div>
         </div>
@@ -1671,185 +1671,3 @@ const Footer = ({ showToast, setActiveModal, setCurrentView }) => {
     </footer>
   );
 };
-
-// --- Coming Soon Page Component ---
-const ComingSoonPage = ({ setCurrentView }) => {
-  return (
-    <div className="min-h-screen bg-[#FCFBFB] flex items-center justify-center px-4 relative">
-      {/* Hidden admin lock icon in top-right corner */}
-      <button
-        onClick={() => setCurrentView('admin-login')}
-        className="absolute top-6 right-6 opacity-20 hover:opacity-100 transition-opacity"
-        title="Admin Login"
-      >
-        <Lock size={20} strokeWidth={1} />
-      </button>
-
-      <div className="text-center max-w-2xl">
-        <div className="mb-8">
-          <h1 className="font-elegant text-6xl md:text-7xl tracking-wide" style={{ color: colors.dustyOrchid }}>
-            Satin & Stem
-          </h1>
-        </div>
-        <h2 className="font-elegant text-4xl md:text-6xl mb-6" style={{ color: colors.deepRosewood }}>
-          Coming Soon
-        </h2>
-        <p className="font-sleek text-lg text-gray-600 mb-8">
-          We're preparing something beautiful for you.<br />
-          Be the first to know when we launch.
-        </p>
-        <a
-          href="https://instagram.com/satinandstemshop"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block border-b border-[#D56989] pb-1 hover:opacity-70 transition-opacity"
-        >
-          <span className="font-sleek text-sm tracking-widest uppercase" style={{ color: colors.dustyOrchid }}>
-            Follow us on Instagram
-          </span>
-        </a>
-      </div>
-    </div>
-  );
-};
-
-// ---------- Main App Component ----------
-export default function App() {
-  const [toastMessage, setToastMessage] = useState('');
-  const [currentView, setCurrentView] = useState('home');
-  const [cart, setCart] = useState([]);
-  const [activeModal, setActiveModal] = useState(null);
-  const [products, setProducts] = useState({ classic: [], collegiate: [], greek: [] });
-  const [comingSoon, setComingSoon] = useState(false);
-
-  // Fetch products from Supabase on mount
-  useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase.from('products').select('*');
-      if (!error && data) {
-        const grouped = {
-          classic: data.filter(p => p.category === 'classic'),
-          collegiate: data.filter(p => p.category === 'collegiate'),
-          greek: data.filter(p => p.category === 'greek'),
-        };
-        setProducts(grouped);
-      } else {
-        // Fallback to mock data if Supabase is not ready
-        setProducts(initialProducts);
-      }
-    };
-    fetchProducts();
-  }, []);
-
-  // Fetch coming soon setting
-  useEffect(() => {
-    const fetchSettings = async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'coming_soon')
-        .single();
-      if (!error && data) {
-        setComingSoon(data.value);
-      }
-    };
-    fetchSettings();
-  }, []);
-
-  // Handle Stripe success redirect and clear cart
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      setCart([]);
-      showToast('Payment successful! Your order is confirmed.');
-      setCurrentView('thank-you');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    if (urlParams.get('canceled') === 'true') {
-      showToast('Payment canceled. You can try again.');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [currentView]);
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
-  };
-
-  const addToCart = (product) => {
-    // Count how many of this product are already in the cart
-    const currentCount = cart.filter(item => item.id === product.id).length;
-    if (currentCount + 1 > product.inventory) {
-      showToast(`Only ${product.inventory} available. Cannot add more.`);
-      return;
-    }
-    setCart([...cart, product]);
-    showToast(`Added ${product.name} to Cart`);
-  };
-
-  const isPublicView = !currentView.startsWith('admin');
-
-  // Coming soon mode: show coming soon page unless admin route
-  if (comingSoon && !currentView.startsWith('admin')) {
-      return <ComingSoonPage setCurrentView={setCurrentView} />;
-  }
-
-  return (
-    <>
-      <style>{customStyles}</style>
-      <div className="min-h-screen bg-[#FCFBFB] font-sans text-gray-900 relative">
-        {isPublicView && <Navbar showToast={showToast} currentView={currentView} setCurrentView={setCurrentView} cart={cart} />}
-        
-        {currentView === 'home' && (
-          <>
-            <HeroSection setCurrentView={setCurrentView} />
-            <CollectionsSection setCurrentView={setCurrentView} />
-          </>
-        )}
-
-        {currentView === 'classic' && (
-          <CollectionPage categoryKey="classic" title="The Classic Collection" description="Our foundational line featuring soft romantic hues and timeless ivory ribbons." setCurrentView={setCurrentView} showToast={showToast} addToCart={addToCart} cart={cart} products={products} />
-        )}
-
-        {currentView === 'collegiate' && (
-          <CollectionPage categoryKey="collegiate" title="Collegiate Heritage" description="Elegant interpretations of university pride, meticulously crafted for Florida's finest." setCurrentView={setCurrentView} showToast={showToast} addToCart={addToCart} cart={cart} products={products} />
-        )}
-
-        {currentView === 'greek' && (
-          <CollectionPage categoryKey="greek" title="Greek Excellence" description="Sophisticated designs honoring the legacy and colors of D9 and Panhellenic organizations." setCurrentView={setCurrentView} showToast={showToast} addToCart={addToCart} cart={cart} products={products} />
-        )}
-
-        {currentView === 'custom' && <CustomOrderPage setCurrentView={setCurrentView} showToast={showToast} />}
-        {currentView === 'cart' && <CartPage cart={cart} setCart={setCart} setCurrentView={setCurrentView} showToast={showToast} />}
-        {currentView === 'thank-you' && <ThankYouPage setCurrentView={setCurrentView} />}
-
-        {currentView === 'admin-login' && <AdminLogin setCurrentView={setCurrentView} showToast={showToast} />}
-        {currentView === 'admin-dashboard' && <AdminDashboard setCurrentView={setCurrentView} showToast={showToast} products={products} setProducts={setProducts} comingSoon={comingSoon} setComingSoon={setComingSoon} />}
-
-        {isPublicView && <Footer showToast={showToast} setActiveModal={setActiveModal} setCurrentView={setCurrentView} />}
-
-        {activeModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-            <div className="bg-white p-8 max-w-md w-full border shadow-2xl relative" style={{ borderColor: colors.lavenderBlush }}>
-              <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 hover:opacity-50 transition-opacity" style={{ color: colors.deepRosewood }}><X size={20} strokeWidth={1} /></button>
-              <h3 className="font-elegant text-3xl mb-4" style={{ color: colors.deepRosewood }}>{activeModal === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions'}</h3>
-              <p className="font-sleek text-sm leading-relaxed" style={{ color: colors.mutedMauve }}>We respect your privacy. Contact information is used solely for order fulfillment.</p>
-            </div>
-          </div>
-        )}
-
-        {toastMessage && (
-          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300">
-            <div className="px-8 py-4 shadow-lg font-sleek text-sm tracking-widest uppercase flex items-center space-x-3 border" style={{ backgroundColor: '#FCFBFB', color: colors.deepRosewood, borderColor: colors.lavenderBlush }}>
-              <span>{toastMessage}</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  );
-}

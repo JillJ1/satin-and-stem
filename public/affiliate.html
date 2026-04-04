@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Stem Collective – Influencer Application | Satin & Stem</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #FCFBFB;
+      font-family: 'Jost', sans-serif;
+      color: #4A373C;
+      line-height: 1.5;
+    }
+
+    .stripe-bg {
+      background-image: repeating-linear-gradient(
+        45deg,
+        rgba(244, 223, 230, 0.2) 0px,
+        rgba(244, 223, 230, 0.2) 2px,
+        transparent 2px,
+        transparent 12px
+      );
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 60px auto;
+      background: #FFFFFF;
+      border: 1px solid #F4DFE6;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(213, 105, 137, 0.05);
+      overflow: hidden;
+    }
+
+    .header {
+      text-align: center;
+      padding: 48px 32px 24px;
+      border-bottom: 1px solid #F4DFE6;
+      background-color: #FCFBFB;
+    }
+
+    .brand-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 42px;
+      font-weight: 400;
+      letter-spacing: -0.5px;
+      color: #D56989;
+      margin-bottom: 8px;
+    }
+
+    .tagline {
+      font-size: 14px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #97A13B;
+      font-weight: 400;
+    }
+
+    .form-wrapper {
+      padding: 40px 48px 48px;
+      background: #FFFFFF;
+    }
+
+    .form-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 400;
+      color: #4A373C;
+      margin-bottom: 8px;
+    }
+
+    .form-subtitle {
+      font-size: 14px;
+      color: #8A7A7E;
+      margin-bottom: 32px;
+      border-left: 2px solid #D56989;
+      padding-left: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #4A373C;
+      margin-bottom: 8px;
+      margin-top: 20px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 16px;
+      font-family: 'Jost', sans-serif;
+      font-size: 15px;
+      border: 1px solid #E0A3BB;
+      border-radius: 8px;
+      background-color: #FCFBFB;
+      transition: all 0.2s ease;
+      color: #4A373C;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #D56989;
+      box-shadow: 0 0 0 2px rgba(213, 105, 137, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .tier-option {
+      margin-bottom: 20px;
+      border: 1px solid #F4DFE6;
+      border-radius: 12px;
+      padding: 16px;
+      background: #FCFBFB;
+    }
+
+    .tier-option label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .tier-option input {
+      width: auto;
+      margin: 0;
+    }
+
+    .tier-description {
+      font-size: 13px;
+      color: #8A7A7E;
+      margin-left: 28px;
+      line-height: 1.4;
+    }
+
+    button {
+      width: 100%;
+      background: transparent;
+      border: 1px solid #4A373C;
+      border-radius: 40px;
+      padding: 14px 24px;
+      font-family: 'Jost', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #4A373C;
+      cursor: pointer;
+      margin-top: 36px;
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      background: #F4DFE6;
+      border-color: #D56989;
+      color: #D56989;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 12px;
+      color: #8A7A7E;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid #F4DFE6;
+    }
+
+    .footer-note a {
+      color: #D56989;
+      text-decoration: none;
+    }
+
+    .footer-note a:hover {
+      text-decoration: underline;
+    }
+
+    /* Success/error message styles */
+    .message {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+    .message.success {
+      background: #e6f7e6;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+    .message.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    @media (max-width: 680px) {
+      .container {
+        margin: 20px;
+      }
+      .form-wrapper {
+        padding: 28px 24px 36px;
+      }
+      .brand-name {
+        font-size: 32px;
+      }
+      .tier-option {
+        padding: 12px;
+      }
+      .tier-description {
+        margin-left: 24px;
+      }
+    }
+  </style>
+</head>
+<body class="stripe-bg">
+  <div class="container">
+    <div class="header">
+      <div class="brand-name">Satin & Stem</div>
+      <div class="tagline">The Stem Collective</div>
+    </div>
+
+    <div class="form-wrapper">
+      <div class="form-title">Influencer & Affiliate Application</div>
+      <div class="form-subtitle">We invite you to grow with us.</div>
+
+      <form id="affiliateForm" action="/api/affiliate" method="POST">
+        <label>Full name</label>
+        <input type="text" name="name" required>
+
+        <label>Email address</label>
+        <input type="email" name="email" required>
+
+        <label>Instagram / TikTok handle</label>
+        <input type="text" name="social" placeholder="@username" required>
+
+        <label>Follower count</label>
+        <select name="followers" required>
+          <option value="">Select</option>
+          <option value="500-1k">500 – 1,000</option>
+          <option value="1k-5k">1,000 – 5,000</option>
+          <option value="5k-20k">5,000 – 20,000</option>
+          <option value="20k+">20,000+</option>
+        </select>
+
+        <label>Preferred tier</label>
+        <div class="tier-option">
+          <label>
+            <input type="radio" name="tier" value="seedling" required> Seedling
+          </label>
+          <div class="tier-description">Receive a free stole in exchange for creating content (one photo/video + two stories). Perfect for micro-influencers or campus leaders.</div>
+        </div>
+
+        <div class="tier-option">
+          <label>
+            <input type="radio" name="tier" value="bloom"> Bloom
+          </label>
+          <div class="tier-description">Earn 10% commission on sales using your unique discount code, plus a free stole after every 5 sales. Ideal for consistent content creators and brand ambassadors.</div>
+        </div>
+
+        <div class="tier-option">
+          <label>
+            <input type="radio" name="tier" value="both"> Both – Open to either
+          </label>
+          <div class="tier-description">You're flexible. We'll recommend the best fit based on your profile.</div>
+        </div>
+
+        <label>Why would you be a great ambassador?</label>
+        <textarea name="why" required></textarea>
+
+        <label>Link to a recent post (optional)</label>
+        <input type="url" name="example_post" placeholder="https://instagram.com/p/...">
+
+        <button type="submit">Submit Application</button>
+
+        <div id="formMessage" class="message"></div>
+
+        <div class="footer-note">
+          By applying, you agree to our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms & Conditions</a>. We’ll reach out within 5–7 days.
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('affiliateForm');
+    const messageDiv = document.getElementById('formMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch('/api/affiliate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          messageDiv.className = 'message success';
+          messageDiv.textContent = 'Application submitted! We’ll be in touch soon.';
+          messageDiv.style.display = 'block';
+          form.reset();
+          // Optional: scroll to message
+          messageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          throw new Error(result.error || 'Submission failed');
+        }
+      } catch (err) {
+        messageDiv.className = 'message error';
+        messageDiv.textContent = err.message || 'Something went wrong. Please try again.';
+        messageDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
