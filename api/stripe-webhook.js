@@ -54,11 +54,24 @@ export default async function handler(req, res) {
 
     // Duplicate prevention: if already paid, skip processing
     if (order.status === 'Paid - In Production') {
-      console.log('⏭️ Order already paid – skipping duplicate email.');
+      console.log('⏭️ Order already paid – skipping duplicate.');
       return res.status(200).json({ received: true });
     }
 
-    // Update order status
+    // --- Deduct inventory for each item ---
+    const items = order.items;
+    for (const item of items) {
+      const { error: deductError } = await supabase
+        .rpc('deduct_inventory', { product_id: item.id, quantity: item.quantity });
+      if (deductError) {
+        console.error(`❌ Failed to deduct inventory for product ${item.id}:`, deductError);
+        // If inventory deduction fails, we should not mark order as paid
+        return res.status(500).json({ error: `Inventory deduction failed for product ${item.id}` });
+      }
+    }
+    console.log('✅ Inventory deducted');
+
+    // Update order status to 'Paid - In Production'
     const { error: updateError } = await supabase
       .from('orders')
       .update({ status: 'Paid - In Production', stripe_payment_status: 'paid' })
@@ -148,17 +161,16 @@ export default async function handler(req, res) {
                   <td colspan="2" style="padding-top: 30px; color: #8A7A7E;">
                     <strong>Shipping to:</strong><br>
                     <span style="line-height: 1.6;">${shippingAddressStr}</span>
-                   </td>
+                    </td>
                 </tr>
-               </table>
+              </table>
 
-             </td>
-           </tr>
-         </table>
-
-       </td>
-     </tr>
-   </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 

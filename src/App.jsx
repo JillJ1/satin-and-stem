@@ -699,16 +699,17 @@ const CartPage = ({ cart, setCart, setCurrentView, showToast }) => {
       zip: formData.zip
     };
 
-    const { error } = await supabase.rpc('create_order_and_update_inventory', {
-      order_number: orderNumber,
-      customer_name: customerName,
-      customer_email: formData.email,
-      items: itemsForDb,
-      total: `$${grandTotal.toFixed(2)}`,
-      payment_method: 'stripe',
-      delivery_method: 'shipping',
-      shipping_address: shippingAddress,
-    });
+    // Inside handleCheckoutSubmit, replace the supabase.rpc call with:
+const { error } = await supabase.rpc('create_order_no_inventory', {
+  order_number: orderNumber,
+  customer_name: customerName,
+  customer_email: formData.email,
+  items: itemsForDb,
+  total: `$${grandTotal.toFixed(2)}`,
+  payment_method: 'stripe',
+  delivery_method: 'shipping',
+  shipping_address: shippingAddress,
+});
 
     if (error) {
       setIsSubmitting(false);
