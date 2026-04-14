@@ -1764,18 +1764,19 @@ export default function App() {
 
   // Handle Stripe success redirect and clear cart
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      setCart([]);
-      showToast('Payment successful! Your order is confirmed.');
-      setCurrentView('thank-you');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    if (urlParams.get('canceled') === 'true') {
-      showToast('Payment canceled. You can try again.');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('success') === 'true') {
+    setCart([]);
+    showToast('Payment successful! Your order is confirmed.');
+    setCurrentView('thank-you');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+  if (urlParams.get('canceled') === 'true') {
+    showToast('Payment canceled. You can try again.');
+    setCurrentView('cart'); // Show the cart page again (items still there)
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);

@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       ],
       mode: 'payment',
       success_url: `${req.headers.origin}/?success=true&session_id={CHECKOUT_SESSION_ID}&order=${orderNumber}`,
-      cancel_url: `${req.headers.origin}/cart?canceled=true`,
+      cancel_url: `${req.headers.origin}/?canceled=true`, 
       customer_email: customerEmail,
       metadata: { orderNumber, customerName },
     });
