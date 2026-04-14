@@ -166,8 +166,7 @@ const HeroSection = ({ setCurrentView }) => {
     <div className="relative overflow-hidden bg-[#FCFBFB] border-b border-[#F4DFE6]">
       <div className="absolute inset-0 stripe-bg opacity-50"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-24 sm:py-32 flex flex-col md:flex-row items-center justify-between gap-12">
-        
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-24 sm:py-32">
         <div className="flex-1 text-left z-10">
           <p className="font-sleek text-xs tracking-[0.2em] uppercase mb-6" style={{ color: colors.mossGreen }}>
             A Modern Keepsake
@@ -177,13 +176,13 @@ const HeroSection = ({ setCurrentView }) => {
             <span className="italic font-light" style={{ color: colors.dustyOrchid }}>elevated.</span>
           </h1>
           <p className="font-sleek text-lg max-w-md mb-8 font-light leading-relaxed" style={{ color: colors.mutedMauve }}>
-            Beautifully crafted satin ribbons and delicate faux florals, designed to elegantly honor your milestone and last a lifetime.
+            Beautifully assembled ribbons and delicate faux florals, designed to elegantly honor your milestone and last a lifetime.
           </p>
           
           <div className="flex items-center space-x-4 mb-12 pl-4 border-l-2" style={{ borderColor: colors.dustyOrchid }}>
             <p className="font-sleek text-xs uppercase tracking-widest leading-relaxed" style={{ color: colors.deepRosewood }}>
               <span className="font-medium" style={{ color: colors.dustyOrchid }}>Order Timeline:</span><br/>
-              Please place your order at least 30 days in advance<br/>to allow enough time for it to be beautifully crafted.
+              Please place your order at least 14 days in advance<br/>to allow enough time for it to be beautifully crafted.
             </p>
           </div>
 
@@ -198,16 +197,6 @@ const HeroSection = ({ setCurrentView }) => {
               View Collections
             </button>
           </div>
-        </div>
-
-        <div className="flex-1 relative w-full max-w-md aspect-[3/4] lace-border bg-white flex items-center justify-center p-2">
-           <div className="w-full h-full bg-[#F3EEF1] relative overflow-hidden flex flex-col items-center justify-center">
-              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, ${colors.mossGreen} 10px, ${colors.mossGreen} 11px)` }}></div>
-              <span className="font-elegant text-2xl italic z-10" style={{ color: colors.dustyOrchid }}>S & S</span>
-              <p className="font-sleek text-xs tracking-widest uppercase mt-4 z-10" style={{ color: colors.mutedMauve }}>Signature Design</p>
-           </div>
-           <div className="absolute -top-4 -right-4 w-16 h-16 border-t border-r" style={{ borderColor: colors.dustyOrchid }}></div>
-           <div className="absolute -bottom-4 -left-4 w-16 h-16 border-b border-l" style={{ borderColor: colors.dustyOrchid }}></div>
         </div>
       </div>
     </div>
